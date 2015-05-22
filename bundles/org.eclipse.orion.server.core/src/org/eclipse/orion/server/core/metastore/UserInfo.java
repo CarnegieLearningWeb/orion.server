@@ -10,13 +10,15 @@
  *******************************************************************************/
 package org.eclipse.orion.server.core.metastore;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Information about a single user.
  */
 public class UserInfo extends MetadataInfo {
-	private String userName;
+	private String userName, homeWiki;
 
 	private List<String> workspaceIds = EMPTY;
 
@@ -28,6 +30,10 @@ public class UserInfo extends MetadataInfo {
 	 */
 	public String getUserName() {
 		return userName;
+	}
+	
+	public String getHomeWiki() {
+		return homeWiki;
 	}
 
 	/**
@@ -42,6 +48,13 @@ public class UserInfo extends MetadataInfo {
 	 */
 	public void setUserName(String userName) {
 		this.userName = userName;
+	}
+	
+	/**
+	 * @param homeWiki the homeWiki to set
+	 */
+	public void setHomeWiki(String homeWiki) {
+		this.homeWiki = homeWiki;
 	}
 
 	/**

@@ -136,6 +136,10 @@ public class FormAuthHelper {
 			}
 			json.put(UserConstants.FULL_NAME, userInfo.getFullName());
 			json.put(UserConstants.USER_NAME, userInfo.getUserName());
+
+			//Added by Jon
+			json.put(UserConstants.HOME_WIKI, userInfo.getHomeWiki());
+			
 			json.put(UserConstants.LOCATION, contextPath + UserConstants.LOCATION_USERS_SERVLET + '/' + userInfo.getUserName());
 			String email = userInfo.getProperty(UserConstants.EMAIL);
 			json.put(UserConstants.EMAIL, email);

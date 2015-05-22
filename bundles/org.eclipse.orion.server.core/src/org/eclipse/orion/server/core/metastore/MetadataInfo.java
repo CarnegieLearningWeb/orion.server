@@ -10,7 +10,10 @@
  *******************************************************************************/
 package org.eclipse.orion.server.core.metastore;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * A snapshot of information about an entity of the Orion metadata, such as a user,
@@ -28,7 +31,7 @@ public class MetadataInfo {
 		CREATE, UPDATE, DELETE
 	};
 
-	private String fullName;
+	private String fullName, homeWiki;
 	private String id;
 	private final Map<String, OperationType> operations = Collections.synchronizedMap(new HashMap<String, OperationType>());
 	private final Map<String, String> properties = Collections.synchronizedMap(new HashMap<String, String>());
@@ -69,6 +72,10 @@ public class MetadataInfo {
 	public String getProperty(String key) {
 		return properties.get(key);
 	}
+	
+	public String getHomeWiki() {
+		return homeWiki;
+	}
 
 	/**
 	 * Returns a read-only map of the keys and operations performed on the properties of this object
@@ -101,6 +108,10 @@ public class MetadataInfo {
 	 */
 	public void setFullName(String fullName) {
 		this.fullName = fullName;
+	}
+	
+	public void setHomeWiki(String homeWiki) {
+		this.homeWiki = homeWiki;
 	}
 
 	/**

@@ -206,6 +206,10 @@ public class SimpleMetaStore implements IMetaStore {
 				jsonObject.put(MetadataInfo.UNIQUE_ID, userId);
 				jsonObject.put(UserConstants.USER_NAME, userId);
 				jsonObject.put(UserConstants.FULL_NAME, userInfo.getFullName());
+				
+				//Added by Jon
+				jsonObject.put(UserConstants.HOME_WIKI, userInfo.getHomeWiki());
+				
 				jsonObject.put("WorkspaceIds", new JSONArray());
 				JSONObject properties = updateProperties(jsonObject, userInfo);
 				jsonObject.put("Properties", properties);
@@ -234,7 +238,7 @@ public class SimpleMetaStore implements IMetaStore {
 				userPropertyCache.add(UserConstants.USER_NAME, userId, userId);
 			}
 			Logger logger = LoggerFactory.getLogger("org.eclipse.orion.server.config"); //$NON-NLS-1$
-			logger.debug("Created new user " + userId + "."); //$NON-NLS-1$
+			logger.debug("Created new user " + userId + " === " + userInfo.getHomeWiki()); //$NON-NLS-1$
 		} finally {
 			lock.writeLock().unlock();
 		}
@@ -644,6 +648,9 @@ public class SimpleMetaStore implements IMetaStore {
 			projectInfo.setUniqueId(jsonObject.getString(MetadataInfo.UNIQUE_ID));
 			projectInfo.setWorkspaceId(jsonObject.getString("WorkspaceId"));
 			projectInfo.setFullName(jsonObject.getString(UserConstants.FULL_NAME));
+			//Added by Jon, do I need this here?
+//			projectInfo.setHomeWiki(jsonObject.getString(UserConstants.HOME_WIKI));
+			
 			if (jsonObject.has("ContentLocation")) {
 				String decodedContentLocation = SimpleMetaStoreUtil.decodeProjectContentLocation(jsonObject.getString("ContentLocation"));
 				projectInfo.setContentLocation(new URI(decodedContentLocation));
@@ -706,6 +713,15 @@ public class SimpleMetaStore implements IMetaStore {
 					} else {
 						userInfo.setFullName(jsonObject.getString(UserConstants.FULL_NAME));
 					}
+					
+					//Added by Jon
+					userInfo.setHomeWiki(jsonObject.getString(UserConstants.HOME_WIKI));
+					if (jsonObject.isNull(UserConstants.HOME_WIKI)) {
+						userInfo.setHomeWiki("Unassigned");
+					}else {
+						userInfo.setHomeWiki(jsonObject.getString(UserConstants.HOME_WIKI));
+					}
+					
 					List<String> userWorkspaceIds = new ArrayList<String>();
 					JSONArray workspaceIds = jsonObject.getJSONArray("WorkspaceIds");
 					if (workspaceIds.length() > 0) {
@@ -737,6 +753,7 @@ public class SimpleMetaStore implements IMetaStore {
 		userInfo.setUniqueId(userId);
 		userInfo.setUserName(userId);
 		userInfo.setFullName("Unnamed User");
+		userInfo.setHomeWiki("");
 		createUser(userInfo);
 		return userInfo;
 	}
@@ -1102,6 +1119,10 @@ public class SimpleMetaStore implements IMetaStore {
 				jsonObject.put(MetadataInfo.UNIQUE_ID, userInfo.getUniqueId());
 				jsonObject.put(UserConstants.USER_NAME, userInfo.getUserName());
 				jsonObject.put(UserConstants.FULL_NAME, userInfo.getFullName());
+				
+				//Added by Jon
+				jsonObject.put(UserConstants.HOME_WIKI, userInfo.getHomeWiki());
+				
 				JSONArray workspaceIds = new JSONArray(userInfo.getWorkspaceIds());
 				jsonObject.put("WorkspaceIds", workspaceIds);
 				JSONObject properties = updateProperties(jsonObject, userInfo);

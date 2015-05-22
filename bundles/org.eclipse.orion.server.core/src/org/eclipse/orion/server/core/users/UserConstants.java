@@ -106,4 +106,10 @@ public class UserConstants {
 	 * JSON representation key for a user's name, the login or short account name. The value's data type is a String.
 	 */
 	public static final String USER_NAME = "UserName"; //$NON-NLS-1$
+	
+	/**
+	 * Added by Jon
+	 * JSON representation key for a user's home wiki. The value's data type is a String.
+	 */
+	public static final String HOME_WIKI = "HomeWiki"; //$NON-NLS-1$
 }
