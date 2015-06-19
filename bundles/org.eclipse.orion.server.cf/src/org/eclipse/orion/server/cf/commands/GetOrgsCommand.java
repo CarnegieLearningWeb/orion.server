@@ -17,6 +17,7 @@ import java.util.List;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.httpclient.ConnectTimeoutException;
+import org.apache.commons.httpclient.NameValuePair;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
@@ -49,16 +50,24 @@ public class GetOrgsCommand extends AbstractCFCommand {
 			URI targetURI = URIUtil.toURI(target.getUrl());
 			URI orgsURI = targetURI.resolve("/v2/organizations");
 
-			GetMethod getDomainsMethod = new GetMethod(orgsURI.toString());
-			HttpUtil.configureHttpMethod(getDomainsMethod, target.getCloud());
-			getDomainsMethod.setQueryString("inline-relations-depth=1"); //$NON-NLS-1$
+			GetMethod getOrgsMethod = new GetMethod(orgsURI.toString());
+			ServerStatus confStatus = HttpUtil.configureHttpMethod(getOrgsMethod, target.getCloud());
+			if (!confStatus.isOK())
+				return confStatus;
+			
+			List<NameValuePair> params = new ArrayList<NameValuePair>();
+			params.add(new NameValuePair("inline-relations-depth", "1"));
+			if (target.getCloud().getRegion() != null){
+				params.add(new NameValuePair("region", target.getCloud().getRegion()));
+			}
+			getOrgsMethod.setQueryString(params.toArray(new NameValuePair[params.size()]));
 
-			ServerStatus status = HttpUtil.executeMethod(getDomainsMethod);
-			if (!status.isOK())
-				return status;
+			ServerStatus getOrgsStatus = HttpUtil.executeMethod(getOrgsMethod);
+			if (!getOrgsStatus.isOK() && getOrgsStatus.getHttpCode() != HttpServletResponse.SC_PARTIAL_CONTENT)
+				return getOrgsStatus;
 
 			/* extract available orgs */
-			JSONObject orgs = status.getJsonData();
+			JSONObject orgs = getOrgsStatus.getJsonData();
 
 			if (orgs == null || orgs.optInt(CFProtocolConstants.V2_KEY_TOTAL_RESULTS, 0) < 1) {
 				return new ServerStatus(IStatus.ERROR, HttpServletResponse.SC_NO_CONTENT, "Server did not return any organizations.", null);
@@ -69,16 +78,11 @@ public class GetOrgsCommand extends AbstractCFCommand {
 			int resources = orgs.getJSONArray(CFProtocolConstants.V2_KEY_RESOURCES).length();
 			for (int k = 0; k < resources; ++k) {
 				JSONObject orgJSON = orgs.getJSONArray(CFProtocolConstants.V2_KEY_RESOURCES).getJSONObject(k);
-				if (orgJSON.getJSONObject(CFProtocolConstants.V2_KEY_ENTITY).has(CFProtocolConstants.V2_KEY_REGION)){
-					String region = orgJSON.getJSONObject(CFProtocolConstants.V2_KEY_ENTITY).getString(CFProtocolConstants.V2_KEY_REGION);
-					if (!region.equals(target.getCloud().getRegion()))
-						continue;
-				}
 				
 				List<Space> spaces = new ArrayList<Space>();
-				status = getSpaces(spaces, orgJSON);
-				if (!status.isOK())
-					return status;
+				ServerStatus getSpacesStatus = getSpaces(spaces, orgJSON);
+				if (!getSpacesStatus.isOK())
+					return getSpacesStatus;
 				
 				OrgWithSpaces orgWithSpaces = new OrgWithSpaces();
 				orgWithSpaces.setCFJSON(orgJSON);
@@ -104,7 +108,10 @@ public class GetOrgsCommand extends AbstractCFCommand {
 		URI spaceURI = targetURI.resolve(orgJSON.getJSONObject("entity").getString("spaces_url"));
 
 		GetMethod getDomainsMethod = new GetMethod(spaceURI.toString());
-		HttpUtil.configureHttpMethod(getDomainsMethod, target.getCloud());
+		ServerStatus confStatus = HttpUtil.configureHttpMethod(getDomainsMethod, target.getCloud());
+		if (!confStatus.isOK())
+			return confStatus;
+		
 		getDomainsMethod.setQueryString("inline-relations-depth=1"); //$NON-NLS-1$
 
 		ServerStatus status = HttpUtil.executeMethod(getDomainsMethod);

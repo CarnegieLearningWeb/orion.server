@@ -13,6 +13,7 @@ package org.eclipse.orion.server.git.objects;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
@@ -122,28 +123,25 @@ public class Branch extends GitObject {
 	@PropertyDescription(name = GitConstants.KEY_REMOTE)
 	private JSONArray getRemotes() throws URISyntaxException, JSONException, IOException, CoreException {
 		String branchName = Repository.shortenRefName(ref.getName());
-		JSONArray result = new JSONArray();
 		String remoteName = getConfig().getString(ConfigConstants.CONFIG_BRANCH_SECTION, branchName, ConfigConstants.CONFIG_KEY_REMOTE);
-		if (remoteName != null) {
-			RemoteConfig remoteConfig = new RemoteConfig(getConfig(), remoteName);
+		List<RemoteConfig> remoteConfigs = RemoteConfig.getAllRemoteConfigs(getConfig());
+		ArrayList<JSONObject> remotes = new ArrayList<JSONObject>();
+		for (RemoteConfig remoteConfig : remoteConfigs) {
 			if (!remoteConfig.getFetchRefSpecs().isEmpty()) {
-				Remote remote = new Remote(cloneLocation, db, remoteName);
-				remote.setNewBranch(branchName);
-				result.put(remote.toJSON());
-			}
-		} else {
-			List<RemoteConfig> remoteConfigs = RemoteConfig.getAllRemoteConfigs(getConfig());
-			for (RemoteConfig remoteConfig : remoteConfigs) {
-				if (!remoteConfig.getFetchRefSpecs().isEmpty()) {
-					Remote r = new Remote(cloneLocation, db, remoteConfig.getName());
-					r.setNewBranch(branchName);
-					if (db.resolve(Constants.R_REMOTES + remoteConfig.getName() + "/" + branchName) != null) { //$NON-NLS-1$
-						// it's an existing branch, not a new one, use it as filter
-						return new JSONArray().put(r.toJSON());
-					}
-					result.put(r.toJSON());
+				Remote r = new Remote(cloneLocation, db, remoteConfig.getName());
+				r.setNewBranch(branchName);
+				// Ensure that the remote tracking branch is the first in the list.
+				// Insert at the beginning of the list as well when the remote tracking branch is not set but the branch has been pushed to the remote
+				if (remoteConfig.getName().equals(remoteName) || (remoteName == null && db.resolve(Constants.R_REMOTES + remoteConfig.getName() + "/" + branchName) != null)) {
+					remotes.add(0, r.toJSON());
+				} else {
+					remotes.add(r.toJSON());
 				}
 			}
+		}
+		JSONArray result = new JSONArray();
+		for (JSONObject remote : remotes) {
+			result.put(remote);
 		}
 		return result;
 	}

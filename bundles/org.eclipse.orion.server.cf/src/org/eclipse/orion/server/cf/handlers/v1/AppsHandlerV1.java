@@ -197,7 +197,6 @@ public class AppsHandlerV1 extends AbstractRESTHandler<App> {
 		/* non-manifest deployments using a .json representation */
 		final JSONObject manifestJSON = jsonData.optJSONObject(CFProtocolConstants.KEY_MANIFEST);
 		final JSONObject instrumentationJSON = jsonData.optJSONObject(CFProtocolConstants.KEY_INSTRUMENTATION);
-		final boolean persistManifest = jsonData.optBoolean(CFProtocolConstants.KEY_PERSIST, false);
 
 		/* default application startup is one minute */
 		int userTimeout = jsonData.optInt(CFProtocolConstants.KEY_TIMEOUT, 60);
@@ -225,7 +224,6 @@ public class AppsHandlerV1 extends AbstractRESTHandler<App> {
 
 						/* check for non-manifest deployment */
 						if (manifestJSON != null) {
-
 							ParseManifestJSONCommand parseManifestJSONCommand = new ParseManifestJSONCommand(manifestJSON, userId, contentLocation);
 							status = parseManifestJSONCommand.doIt();
 							if (!status.isOK())
@@ -234,22 +232,7 @@ public class AppsHandlerV1 extends AbstractRESTHandler<App> {
 							/* get the manifest name */
 							manifest = parseManifestJSONCommand.getManifest();
 							appStore = parseManifestJSONCommand.getAppStore();
-
-							if (manifest != null) {
-								ManifestParseTree applications = manifest.get(CFProtocolConstants.V2_KEY_APPLICATIONS);
-								if (applications.getChildren().size() > 0)
-									manifestAppName = applications.get(0).get(CFProtocolConstants.V2_KEY_NAME).getValue();
-
-								if (persistManifest) {
-									/* non-manifest deployment - persist at contentLocation/manifest.yml */
-									IFileStore persistBaseLocation = parseManifestJSONCommand.getPersistBaseLocation();
-									IFileStore persistLocation = persistBaseLocation.getChild(ManifestConstants.MANIFEST_FILE_NAME);
-									manifest.persist(persistLocation);
-								}
-							}
-
 						} else {
-
 							ParseManifestCommand parseManifestCommand = new ParseManifestCommand(target, userId, contentLocation);
 							status = parseManifestCommand.doIt();
 							if (!status.isOK())
@@ -258,13 +241,12 @@ public class AppsHandlerV1 extends AbstractRESTHandler<App> {
 							/* get the manifest name */
 							manifest = parseManifestCommand.getManifest();
 							appStore = parseManifestCommand.getAppStore();
-
-							if (manifest != null) {
-								ManifestParseTree applications = manifest.get(CFProtocolConstants.V2_KEY_APPLICATIONS);
-								if (applications.getChildren().size() > 0)
-									manifestAppName = applications.get(0).get(CFProtocolConstants.V2_KEY_NAME).getValue();
-							}
-
+						}
+						
+						if (manifest != null) {
+							ManifestParseTree applications = manifest.get(CFProtocolConstants.V2_KEY_APPLICATIONS);
+							if (applications.getChildren().size() > 0 && applications.get(0).has(CFProtocolConstants.V2_KEY_NAME))
+								manifestAppName = applications.get(0).get(CFProtocolConstants.V2_KEY_NAME).getValue();
 						}
 					}
 
@@ -418,7 +400,10 @@ public class AppsHandlerV1 extends AbstractRESTHandler<App> {
 		URI appsURI = URIUtil.toURI(target.getUrl()).resolve(appsUrl);
 
 		GetMethod getAppsMethod = new GetMethod(appsURI.toString());
-		HttpUtil.configureHttpMethod(getAppsMethod, target.getCloud());
+		ServerStatus confStatus = HttpUtil.configureHttpMethod(getAppsMethod, target.getCloud());
+		if (!confStatus.isOK())
+			return confStatus;
+		
 		getAppsMethod.setQueryString("inline-relations-depth=2"); //$NON-NLS-1$
 
 		ServerStatus getAppsStatus = HttpUtil.executeMethod(getAppsMethod);

@@ -11,15 +11,21 @@
 package org.eclipse.orion.server.cf.commands;
 
 import java.net.URI;
+
 import javax.servlet.http.HttpServletResponse;
+
 import org.apache.commons.httpclient.methods.GetMethod;
-import org.eclipse.core.runtime.*;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.core.runtime.URIUtil;
 import org.eclipse.orion.server.cf.objects.Org;
 import org.eclipse.orion.server.cf.objects.Target;
 import org.eclipse.orion.server.cf.utils.HttpUtil;
 import org.eclipse.orion.server.core.ServerStatus;
 import org.eclipse.osgi.util.NLS;
-import org.json.*;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -86,16 +92,19 @@ public class SetOrgCommand extends AbstractCFCommand {
 	public ServerStatus _doIt() {
 		try {
 
-			URI infoURI = URIUtil.toURI(target.getUrl());
-			infoURI = infoURI.resolve("/v2/organizations"); //$NON-NLS-1$
+			URI targetURI = URIUtil.toURI(target.getUrl());
+			URI orgsURI = targetURI.resolve("/v2/organizations"); //$NON-NLS-1$
 
-			GetMethod getMethod = new GetMethod(infoURI.toString());
-			HttpUtil.configureHttpMethod(getMethod, target.getCloud());
-			ServerStatus getStatus = HttpUtil.executeMethod(getMethod);
-			if (!getStatus.isOK())
-				return getStatus;
+			GetMethod getOrgsMethod = new GetMethod(orgsURI.toString());
+			ServerStatus confStatus = HttpUtil.configureHttpMethod(getOrgsMethod, target.getCloud());
+			if (!confStatus.isOK())
+				return confStatus;
+			
+			ServerStatus getOrgsStatus = HttpUtil.executeMethod(getOrgsMethod);
+			if (!getOrgsStatus.isOK() && confStatus.getHttpCode() != HttpServletResponse.SC_PARTIAL_CONTENT)
+				return getOrgsStatus;
 
-			JSONObject result = getStatus.getJsonData();
+			JSONObject result = getOrgsStatus.getJsonData();
 			JSONArray orgs = result.getJSONArray("resources"); //$NON-NLS-1$
 
 			if (orgs.length() == 0)
