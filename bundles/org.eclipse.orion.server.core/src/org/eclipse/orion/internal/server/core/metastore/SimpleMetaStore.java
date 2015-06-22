@@ -715,12 +715,12 @@ public class SimpleMetaStore implements IMetaStore {
 					}
 					
 					//Added by Jon
-					userInfo.setHomeWiki(jsonObject.getString(UserConstants.HOME_WIKI));
-					if (jsonObject.isNull(UserConstants.HOME_WIKI)) {
-						userInfo.setHomeWiki("Unassigned");
-					}else {
-						userInfo.setHomeWiki(jsonObject.getString(UserConstants.HOME_WIKI));
-					}
+//					userInfo.setHomeWiki(jsonObject.getString(UserConstants.HOME_WIKI));
+//					if (jsonObject.isNull(UserConstants.HOME_WIKI)) {
+//						userInfo.setHomeWiki("Unassigned");
+//					}else {
+//						userInfo.setHomeWiki(jsonObject.getString(UserConstants.HOME_WIKI));
+//					}
 					
 					List<String> userWorkspaceIds = new ArrayList<String>();
 					JSONArray workspaceIds = jsonObject.getJSONArray("WorkspaceIds");
