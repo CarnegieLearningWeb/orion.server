@@ -206,7 +206,7 @@ public class GerritListFile extends HttpServlet {
 								FileMode mode = canonicalTreeParser
 										.getEntryFileMode();
 								listEntry(path, mode.equals(FileMode.TREE) ? "dir"
-														: "file", "0", path, projectName, head.getName(), git, contents);
+														: "file", "0", path, projectName, head.getName(), repo, git, contents);
 								canonicalTreeParser.next();
 							}
 						}
@@ -250,10 +250,11 @@ public class GerritListFile extends HttpServlet {
 		}
 	}
 	
-	private static void listEntry(String name, String type, String size, String path, String projectName, String ref, Git git,
-			JSONArray contents) {
+	private static void listEntry(String name, String type, String size, String path, String projectName, String ref, Repository repo, Git git,
+			JSONArray contents) throws IOException {
 		JSONObject jsonObject = new JSONObject();
 		try {
+			ObjectId refId = repo.resolve(ref);
 			jsonObject.put("name", name);
 			jsonObject
 					.put("type", type);
@@ -262,7 +263,7 @@ public class GerritListFile extends HttpServlet {
 			jsonObject.put("project", projectName);
 			jsonObject.put("ref", ref);
 			//if (type.equals("dir")) {
-				lastCommit(git, path, null, jsonObject);
+				lastCommit(git, path, refId, jsonObject);
 			//}
 		} catch (JSONException e) {}
 		contents.put(jsonObject);
@@ -275,7 +276,10 @@ public class GerritListFile extends HttpServlet {
 		JSONObject committerObj = new JSONObject();
 		Iterable<RevCommit> log = null;
 		try {
-			if (path != null) {
+			if (revId != null && path != null) {
+				log = git.log().add(revId).addPath(path).setMaxCount(1).call();
+			}
+			else if (path != null) {
 				log = git.log().addPath(path).setMaxCount(1).call();
 			} else if (revId != null) {
 				log = git.log().add(revId).setMaxCount(1).call();
@@ -392,7 +396,7 @@ public class GerritListFile extends HttpServlet {
 				String test = new String(treeWalk.getRawPath());
 				if (test.length() /*treeWalk.getPathLength()*/ > filePath
 						.length()) {
-					listEntry(treeWalk.getNameString(), "dir", "0", treeWalk.getPathString(), projectName, head.getName(), git, contents);
+					listEntry(treeWalk.getNameString(), "dir", "0", treeWalk.getPathString(), projectName, head.getName(), repo, git, contents);
 				}
 				if (test.length() /*treeWalk.getPathLength()*/ <= filePath
 						.length()) {
@@ -402,7 +406,7 @@ public class GerritListFile extends HttpServlet {
 				ObjectId objId = treeWalk.getObjectId(0);
 				ObjectLoader loader = repo.open(objId);
 				long size = loader.getSize();
-				listEntry(treeWalk.getNameString(), "file", Long.toString(size), treeWalk.getPathString(), projectName, head.getName(), git, contents);
+				listEntry(treeWalk.getNameString(), "file", Long.toString(size), treeWalk.getPathString(), projectName, head.getName(), repo, git, contents);
 			}
 		} while (treeWalk.next());
 		return contents;
