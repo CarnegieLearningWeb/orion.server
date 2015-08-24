@@ -69,6 +69,10 @@ public class CleverOAuthParams extends OAuthParams {
 		return client_secret;
 	}
 
+	public String getRedirectURI() throws OAuthException {
+		return "https://myglife.org/oauth";
+	}
+
 	public String getResponseType() {
 		return RESPONSE_TYPE;
 	}
