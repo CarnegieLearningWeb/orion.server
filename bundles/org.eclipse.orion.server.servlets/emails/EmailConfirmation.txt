@@ -1,15 +1,13 @@
-Confirm your email address for Orion
-Hello, we need to verify your email address <EMAIL> for the Orion account for username <USER>.
+Confirm your email address for Globaloria GIDE
+Hello, we need to verify your email address <EMAIL> for the Globaloria GIDE for username: <USER>.
 
-Once you verify your email address you will be able to login into Orion.
+Once you verify your email address you will be able to login into your GIDE account and start creating your game.
 
 If you wish to continue, please follow the link below:
 
 <URL>
 
-If you're not this user or didn't request an Orion account, you may ignore this email.
-
-Thanks
-The Eclipse Orion Team.
+Thank You,
+The Globaloria Team.
 
 NOTE: This is a machine generated email. Please do not reply to this message.
