@@ -823,6 +823,39 @@ public class SimpleMetaStore implements IMetaStore {
 	public void registerUserProperties(List<String> keys) throws CoreException {
 		// register the user properties with the user cache
 		userPropertyCache.register(keys);
+		if (!(keys.contains(UserConstants.USER_NAME) && keys.size() == 1)) {
+			// initialize the user property cache with values from disk
+			initializeAllRegisteredPropertiesFromDisk();
+		}
+	}
+
+	/**
+	 * Initialize the user properties cache for properties other than user name.
+	 * 
+	 * @throws JSONException
+	 */
+	private void initializeAllRegisteredPropertiesFromDisk() {
+		for (String user : SimpleMetaStoreUtil.listMetaUserFolders(rootLocation)) {
+			File userMetaFile = SimpleMetaStoreUtil.readMetaUserFolder(rootLocation, user);
+			JSONObject jsonObject = SimpleMetaStoreUtil.readMetaFile(userMetaFile, SimpleMetaStoreUtil.USER);
+			JSONObject properties = null;
+			try {
+				properties = jsonObject.getJSONObject("Properties");
+			} catch (JSONException e) {
+				Logger logger = LoggerFactory.getLogger("org.eclipse.orion.server.config"); //$NON-NLS-1$
+				logger.error("SimpleMetaStore.initializeAllRegisteredPropertiesFromDisk: failed reading metafile for user " + user, e);
+			}
+
+			UserInfo info = new UserInfo();
+			info.setUniqueId(user);
+			// call setProperties for its side effect of writing registered properties to the cache.
+			try {
+				setProperties(info, properties);
+			} catch (JSONException e) {
+				Logger logger = LoggerFactory.getLogger("org.eclipse.orion.server.config"); //$NON-NLS-1$
+				logger.error("SimpleMetaStore.initializeAllRegisteredPropertiesFromDisk: failed reading properties for user " + user, e);
+			}
+		}
 	}
 
 	/**

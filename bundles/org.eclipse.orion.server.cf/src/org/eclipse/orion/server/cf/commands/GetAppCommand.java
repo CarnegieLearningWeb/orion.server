@@ -100,6 +100,18 @@ public class GetAppCommand extends AbstractCFCommand {
 				return getStatus;
 
 			JSONObject summaryJSON = getStatus.getJsonData();
+			
+			// instances
+			String instancesUrl = appJSON.getString("url") + "/instances";
+			URI instancesURI = targetURI.resolve(instancesUrl);
+
+			GetMethod getInstancesMethod = new GetMethod(instancesURI.toString());
+			confStatus = HttpUtil.configureHttpMethod(getInstancesMethod, target.getCloud());
+			if (!confStatus.isOK())
+				return confStatus;
+
+			getStatus = HttpUtil.executeMethod(getInstancesMethod);
+			JSONObject instancesJSON = getStatus.getJsonData();
 
 			this.app = new App();
 			this.app.setAppJSON(appJSON);
@@ -107,6 +119,9 @@ public class GetAppCommand extends AbstractCFCommand {
 			this.app.setName(summaryJSON.getString("name"));
 			this.app.setGuid(summaryJSON.getString("guid"));
 			appCache.put(key, app);
+			
+			JSONObject result = this.app.toJSON();
+			result.put("instances_details", instancesJSON);
 
 			return new ServerStatus(Status.OK_STATUS, HttpServletResponse.SC_OK, this.app.toJSON());
 		} catch (Exception e) {

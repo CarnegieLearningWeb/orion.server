@@ -209,6 +209,7 @@ public class GitDiffHandlerV1 extends AbstractGitHandler {
 		AbstractTreeIterator oldTree;
 		AbstractTreeIterator newTree = new FileTreeIterator(db);
 		response.setHeader("Cache-Control", "no-cache"); //$NON-NLS-1$
+		response.setHeader("Content-Disposition", "attachment; filename=\"changes.patch\"");
 		if (scope.contains("..")) { //$NON-NLS-1$
 			String[] commits = scope.split("\\.\\."); //$NON-NLS-1$
 			if (commits.length != 2) {
@@ -326,6 +327,10 @@ public class GitDiffHandlerV1 extends AbstractGitHandler {
 			// TODO: ignore all errors for now, see bug 366008
 			try {
 				ApplyResult applyResult = applyCommand.call();
+				if (applyResult.getUpdatedFiles().size() == 0) {
+					return statusHandler.handleRequest(request, response,
+							new ServerStatus(IStatus.ERROR, HttpServletResponse.SC_BAD_REQUEST, "No files changed", null));
+				}
 				JSONObject resp = new JSONObject();
 				JSONArray modifiedFieles = new JSONArray();
 				for (File file : applyResult.getUpdatedFiles()) {
