@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2012, 2014 IBM Corporation and others
+ * Copyright (c) 2012, 2015 IBM Corporation and others
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -110,7 +110,7 @@ public class RemoteDetailsJob extends GitJob {
 		try {
 			return walk.parseCommit(oid);
 		} finally {
-			walk.release();
+			walk.close();
 		}
 	}
 
@@ -120,7 +120,7 @@ public class RemoteDetailsJob extends GitJob {
 		try {
 			File gitDir = GitUtils.getGitDir(path);
 			db = FileRepositoryBuilder.create(gitDir);
-			Git git = new Git(db);
+			Git git = Git.wrap(db);
 			Set<String> configNames = db.getConfig().getSubsections(ConfigConstants.CONFIG_REMOTE_SECTION);
 			for (String configN : configNames) {
 				if (configN.equals(configName)) {
@@ -205,7 +205,6 @@ public class RemoteDetailsJob extends GitJob {
 			return new Status(IStatus.ERROR, GitActivator.PI_GIT, msg, e);
 		} finally {
 			if (db != null) {
-				// close the git repository
 				db.close();
 			}
 		}

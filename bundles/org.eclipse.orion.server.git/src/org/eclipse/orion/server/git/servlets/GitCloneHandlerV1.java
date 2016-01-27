@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2011, 2014 IBM Corporation and others.
+ * Copyright (c) 2011, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -37,8 +37,10 @@ import org.eclipse.jgit.api.errors.NoMessageException;
 import org.eclipse.jgit.api.errors.RefNotFoundException;
 import org.eclipse.jgit.api.errors.WrongRepositoryStateException;
 import org.eclipse.jgit.dircache.DirCache;
+import org.eclipse.jgit.dircache.DirCacheEntry;
 import org.eclipse.jgit.lib.ConfigConstants;
 import org.eclipse.jgit.lib.Constants;
+import org.eclipse.jgit.lib.FileMode;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.lib.StoredConfig;
@@ -187,7 +189,7 @@ public class GitCloneHandlerV1 extends ServletResourceHandler<String> {
 			WorkspaceInfo workspace = metaStore.readWorkspace(path.segment(1));
 			if (cloneName == null)
 				cloneName = new URIish(url).getHumanishName();
-			cloneName = getUniqueProjectName(workspace, cloneName);
+			cloneName = GitUtils.getUniqueProjectName(workspace, cloneName);
 			webProjectExists = false;
 			project = new ProjectInfo();
 			project.setFullName(cloneName);
@@ -230,6 +232,7 @@ public class GitCloneHandlerV1 extends ServletResourceHandler<String> {
 		String gitUserName = toAdd.optString(GitConstants.KEY_NAME, null);
 		String gitUserMail = toAdd.optString(GitConstants.KEY_MAIL, null);
 		Boolean initProject = toAdd.optBoolean(GitConstants.KEY_INIT_PROJECT, false);
+		Boolean cloneSubmodules = toAdd.optBoolean(GitConstants.KEY_CLONE_SUBMODULES, true);
 		if (initOnly) {
 			// git init
 			InitJob job = new InitJob(clone, TaskJobHandler.getUserId(request), request.getRemoteUser(), cloneLocation, gitUserName, gitUserMail);
@@ -244,26 +247,8 @@ public class GitCloneHandlerV1 extends ServletResourceHandler<String> {
 		// check for SSO token
 		Object cookie = request.getAttribute(GitConstants.KEY_SSO_TOKEN);
 		CloneJob job = new CloneJob(clone, TaskJobHandler.getUserId(request), cp, request.getRemoteUser(), cloneLocation,
-				webProjectExists ? null : project /* used for cleaning up, so null when not needed */, gitUserName, gitUserMail, initProject, cookie);
+				webProjectExists ? null : project /* used for cleaning up, so null when not needed */, gitUserName, gitUserMail, initProject, cloneSubmodules, cookie);
 		return TaskJobHandler.handleTaskJob(request, response, job, statusHandler, JsonURIUnqualificationStrategy.ALL_NO_GIT);
-	}
-
-	/**
-	 * Returns a unique project name that does not exist in the given workspace, for the given clone name.
-	 */
-	private String getUniqueProjectName(WorkspaceInfo workspace, String cloneName) {
-		int i = 1;
-		String uniqueName = cloneName;
-		IMetaStore store = OrionConfiguration.getMetaStore();
-		try {
-			while (store.readProject(workspace.getUniqueId(), uniqueName) != null) {
-				// add an incrementing counter suffix until we arrive at a unique name
-				uniqueName = cloneName + '-' + ++i;
-			}
-		} catch (CoreException e) {
-			// let it proceed with current name
-		}
-		return uniqueName;
 	}
 
 	public static void doConfigureClone(Git git, String user, String gitUserName, String gitUserMail) throws IOException, CoreException, JSONException {
@@ -381,55 +366,77 @@ public class GitCloneHandlerV1 extends ServletResourceHandler<String> {
 					return statusHandler.handleRequest(request, response, new ServerStatus(IStatus.ERROR, HttpServletResponse.SC_BAD_REQUEST, msg, null));
 				}
 
-				Git git = new Git(FileRepositoryBuilder.create(gitDir));
-				if (paths != null) {
-					Set<String> toRemove = new HashSet<String>();
-					CheckoutCommand checkout = git.checkout();
-					for (int i = 0; i < paths.length(); i++) {
-						String p = paths.getString(i);
-						if (removeUntracked && !isInIndex(git.getRepository(), p))
-							toRemove.add(p);
-						checkout.addPath(p);
-					}
-					checkout.call();
-					for (String p : toRemove) {
-						File f = new File(git.getRepository().getWorkTree(), p);
-						f.delete();
-					}
-					return true;
-				} else if (tag != null && branch != null) {
-					CheckoutCommand co = git.checkout();
-					try {
-						co.setName(branch).setStartPoint(tag).setCreateBranch(true).call();
+				Repository db = null;
+				try {
+					db = FileRepositoryBuilder.create(gitDir);
+					Git git = Git.wrap(db);
+					if (paths != null) {
+						Set<String> toRemove = new HashSet<String>();
+						CheckoutCommand checkout = git.checkout();
+						for (int i = 0; i < paths.length(); i++) {
+							String p = paths.getString(i);
+							DirCacheEntry entry = getEntry(db, p);
+							if (removeUntracked && entry ==null)
+								toRemove.add(p);
+							if (entry != null && entry.getFileMode().equals(FileMode.GITLINK) && !new File(db.getWorkTree(), p).exists()){
+								// when checkout removed submodule, remake directory if it doesn't exist
+								new File(db.getWorkTree(), p).mkdir();
+							} else {
+								checkout.addPath(p);
+							}
+						}
+						checkout.call();
+						for (String p : toRemove) {
+							File f = new File(git.getRepository().getWorkTree(), p);
+							if (f.isDirectory()) {
+								FileUtils.delete(f, FileUtils.RECURSIVE);
+							} else {
+								f.delete();
+							}
+						}
 						return true;
-					} catch (RefNotFoundException e) {
-						String msg = NLS.bind("Tag not found: {0}", EncodingUtils.encodeForHTML(tag));
-						return statusHandler.handleRequest(request, response, new ServerStatus(IStatus.ERROR, HttpServletResponse.SC_NOT_FOUND, msg, e));
-					} catch (GitAPIException e) {
-						if (org.eclipse.jgit.api.CheckoutResult.Status.CONFLICTS.equals(co.getResult().getStatus())) {
+					} else if (tag != null && branch != null) {
+						CheckoutCommand co = git.checkout();
+						try {
+							if (branch.isEmpty()) {
+								co.setName(tag).setStartPoint(tag).call();
+							} else {
+								co.setName(branch).setStartPoint(tag).setCreateBranch(true).call();
+							}
+							return true;
+						} catch (RefNotFoundException e) {
+							String msg = NLS.bind("Tag not found: {0}", EncodingUtils.encodeForHTML(tag));
+							return statusHandler.handleRequest(request, response, new ServerStatus(IStatus.ERROR, HttpServletResponse.SC_NOT_FOUND, msg, e));
+						} catch (GitAPIException e) {
+							if (org.eclipse.jgit.api.CheckoutResult.Status.CONFLICTS.equals(co.getResult().getStatus())) {
+								return statusHandler.handleRequest(request, response, new ServerStatus(IStatus.ERROR, HttpServletResponse.SC_CONFLICT,
+										"Checkout aborted.", e));
+							}
+							// TODO: handle other exceptions
+						}
+					} else if (branch != null) {
+	
+						if (!isLocalBranch(git, branch)) {
+							String msg = NLS.bind("{0} is not a branch.", EncodingUtils.encodeForHTML(branch));
+							return statusHandler.handleRequest(request, response, new ServerStatus(IStatus.ERROR, HttpServletResponse.SC_NOT_FOUND, msg, null));
+						}
+	
+						CheckoutCommand co = git.checkout();
+						try {
+							co.setName(Constants.R_HEADS + branch).call();
+							return true;
+						} catch (CheckoutConflictException e) {
 							return statusHandler.handleRequest(request, response, new ServerStatus(IStatus.ERROR, HttpServletResponse.SC_CONFLICT,
 									"Checkout aborted.", e));
-						}
-						// TODO: handle other exceptions
+						} catch (RefNotFoundException e) {
+							String msg = NLS.bind("Branch name not found: {0}", EncodingUtils.encodeForHTML(branch));
+							return statusHandler.handleRequest(request, response, new ServerStatus(IStatus.ERROR, HttpServletResponse.SC_NOT_FOUND, msg, e));
+						} // TODO: handle other exceptions
 					}
-				} else if (branch != null) {
-
-					if (!isLocalBranch(git, branch)) {
-						String msg = NLS.bind("{0} is not a branch.", EncodingUtils.encodeForHTML(branch));
-						return statusHandler.handleRequest(request, response, new ServerStatus(IStatus.ERROR, HttpServletResponse.SC_NOT_FOUND, msg, null));
+				} finally {
+					if (db != null) {
+						db.close();
 					}
-
-					CheckoutCommand co = git.checkout();
-					try {
-						co.setName(Constants.R_HEADS + branch).call();
-						return true;
-					} catch (CheckoutConflictException e) {
-						return statusHandler.handleRequest(request, response, new ServerStatus(IStatus.ERROR, HttpServletResponse.SC_CONFLICT,
-								"Checkout aborted.", e));
-					} catch (RefNotFoundException e) {
-						String msg = NLS.bind("Branch name not found: {0}", EncodingUtils.encodeForHTML(branch));
-						return statusHandler.handleRequest(request, response, new ServerStatus(IStatus.ERROR, HttpServletResponse.SC_NOT_FOUND, msg, e));
-					} // TODO: handle other exceptions
 				}
 			} else {
 				String msg = NLS.bind("Nothing found for the given ID: {0}", EncodingUtils.encodeForHTML(path.toString()));
@@ -448,10 +455,10 @@ public class GitCloneHandlerV1 extends ServletResourceHandler<String> {
 		}
 		return false;
 	}
-
-	private boolean isInIndex(Repository db, String path) throws IOException {
+	
+	private DirCacheEntry getEntry(Repository db, String path) throws IOException {
 		DirCache dc = DirCache.read(db.getIndexFile(), db.getFS());
-		return dc.getEntry(path) != null;
+		return dc.getEntry(path);
 	}
 
 	private boolean handleDelete(HttpServletRequest request, HttpServletResponse response, String pathString) throws GitAPIException, CoreException,

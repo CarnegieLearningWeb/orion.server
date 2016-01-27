@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014 IBM Corporation and others.
+ * Copyright (c) 2014, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -175,7 +175,7 @@ public class GitTreeHandlerV1 extends AbstractGitHandler {
 			if (filterPath.segmentCount() == 0) {
 				JSONArray children = new JSONArray();
 				URI baseLocation = getURI(request);
-				List<Ref> call = new Git(repo).branchList().setListMode(ListMode.ALL).call();
+				List<Ref> call = Git.wrap(repo).branchList().setListMode(ListMode.ALL).call();
 				for (Ref ref : call) {
 					String branchName = Repository.shortenRefName(ref.getName());
 					JSONObject branch = listEntry(branchName, 0, true, 0, baseLocation, GitUtils.encode(branchName));
@@ -264,9 +264,9 @@ public class GitTreeHandlerV1 extends AbstractGitHandler {
 					"An error occured when requesting commit info.", e));
 		} finally {
 			if (walk != null)
-				walk.release();
+				walk.close();
 			if (treeWalk != null)
-				treeWalk.release();
+				treeWalk.close();
 		}
 	}
 

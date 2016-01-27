@@ -94,7 +94,7 @@ public class GitRebaseTest extends GitTest {
 
 			// checkout 'a'
 			Repository db1 = getRepositoryForContentLocation(contentLocation);
-			Git git = new Git(db1);
+			Git git = Git.wrap(db1);
 			assertBranchExist(git, "a");
 			checkoutBranch(cloneLocation, "a");
 
@@ -218,7 +218,7 @@ public class GitRebaseTest extends GitTest {
 
 			// checkout 'a'
 			Repository db1 = getRepositoryForContentLocation(contentLocation);
-			Git git = new Git(db1);
+			Git git = Git.wrap(db1);
 			assertBranchExist(git, "a");
 			checkoutBranch(cloneLocation, "a");
 
@@ -247,7 +247,7 @@ public class GitRebaseTest extends GitTest {
 			request = getGetRequest(testTxt.getString(ProtocolConstants.KEY_LOCATION));
 			response = webConversation.getResponse(request);
 			assertEquals(HttpURLConnection.HTTP_OK, response.getResponseCode());
-			assertTrue(response.getText(), Pattern.matches("<<<<<<< Upstream, based on .*\n1master\n=======\n1a\n>>>>>>> .* first commit on a\n2\n3\n4a\n", response.getText()));
+			assertTrue(response.getText(), Pattern.matches("<<<<<<< Upstream, based on .*\n1master\n=======\n1a\n>>>>>>> .* first commit on a\n2\n3\n4a", response.getText()));
 
 			// abort rebase
 			rebase = rebase(gitHeadUri, Operation.ABORT);
@@ -322,7 +322,7 @@ public class GitRebaseTest extends GitTest {
 
 			// checkout 'a'
 			Repository db1 = getRepositoryForContentLocation(contentLocation);
-			Git git = new Git(db1);
+			Git git = Git.wrap(db1);
 			assertBranchExist(git, "a");
 			checkoutBranch(cloneLocation, "a");
 
@@ -351,7 +351,7 @@ public class GitRebaseTest extends GitTest {
 			request = getGetRequest(testTxt.getString(ProtocolConstants.KEY_LOCATION));
 			response = webConversation.getResponse(request);
 			assertEquals(HttpURLConnection.HTTP_OK, response.getResponseCode());
-			assertTrue(response.getText(), Pattern.matches("<<<<<<< Upstream, based on .*\n1master\n=======\n1a\n>>>>>>> .* first commit on a\n2\n3\n4a\n", response.getText()));
+			assertTrue(response.getText(), Pattern.matches("<<<<<<< Upstream, based on .*\n1master\n=======\n1a\n>>>>>>> .* first commit on a\n2\n3\n4a", response.getText()));
 
 			// continue rebase without conflict resolving
 			rebase = rebase(gitHeadUri, Operation.CONTINUE);
@@ -433,7 +433,7 @@ public class GitRebaseTest extends GitTest {
 
 			// checkout 'a'
 			Repository db1 = getRepositoryForContentLocation(contentLocation);
-			Git git = new Git(db1);
+			Git git = Git.wrap(db1);
 			assertBranchExist(git, "a");
 			checkoutBranch(cloneLocation, "a");
 
@@ -462,7 +462,7 @@ public class GitRebaseTest extends GitTest {
 			request = getGetRequest(testTxt.getString(ProtocolConstants.KEY_LOCATION));
 			response = webConversation.getResponse(request);
 			assertEquals(HttpURLConnection.HTTP_OK, response.getResponseCode());
-			assertTrue(response.getText(), Pattern.matches("<<<<<<< Upstream, based on .*\n1master\n=======\n1a\n>>>>>>> .* first commit on a\n2\n3\n4a\n", response.getText()));
+			assertTrue(response.getText(), Pattern.matches("<<<<<<< Upstream, based on .*\n1master\n=======\n1a\n>>>>>>> .* first commit on a\n2\n3\n4a", response.getText()));
 
 			// continue rebase without conflict resolving - error expected
 			rebase = rebase(gitHeadUri, Operation.CONTINUE);

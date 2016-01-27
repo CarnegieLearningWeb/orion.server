@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2011, 2014 IBM Corporation and others.
+ * Copyright (c) 2011, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -22,7 +22,6 @@ import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.merge.ResolveMerger;
 import org.eclipse.jgit.merge.ThreeWayMerger;
-import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.orion.server.core.ProtocolConstants;
 import org.eclipse.orion.server.core.resources.Property;
 import org.eclipse.orion.server.core.resources.ResourceShape;
@@ -136,19 +135,18 @@ public class Diff extends GitObject {
 				throw new IllegalArgumentException(NLS.bind("Illegal scope format, expected {old}..{new}, was {0}", scope));
 			}
 			ThreeWayMerger merger = new ResolveMerger(db) {
-				@Override
-				protected boolean mergeImpl() throws IOException {
-					// do nothing
-					return false;
-				}
+//				@Override
+//				protected boolean mergeImpl() throws IOException {
+//					// do nothing
+//					return false;
+//				}
 			};
 			// use #merge to set sourceObjects
 			String tip0 = GitUtils.decode(commits[0]);
 			String tip1 = GitUtils.decode(commits[1]);
 			merger.merge(new ObjectId[] { db.resolve(tip0), db.resolve(tip1) });
-			RevCommit baseCommit = merger.getBaseCommit(0, 1);
 
-			IPath p = new Path(GitServlet.GIT_URI + '/' + Commit.RESOURCE).append(baseCommit.getId().getName()).append(path.removeFirstSegments(1));
+			IPath p = new Path(GitServlet.GIT_URI + '/' + Commit.RESOURCE).append(merger.getBaseCommitId().getName()).append(path.removeFirstSegments(1));
 			return new URI(location.getScheme(), location.getUserInfo(), location.getHost(), location.getPort(), p.toString(), "parts=body", null); //$NON-NLS-1$
 		} else if (scope.equals(GitConstants.KEY_DIFF_CACHED)) {
 			// HEAD is the base

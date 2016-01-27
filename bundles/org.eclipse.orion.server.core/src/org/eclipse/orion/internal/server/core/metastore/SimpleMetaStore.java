@@ -107,6 +107,8 @@ public class SimpleMetaStore implements IMetaStore {
 	 */
 	private SimpleMetaStoreUserPropertyCache userPropertyCache = new SimpleMetaStoreUserPropertyCache();
 
+	private final Logger logger = LoggerFactory.getLogger("org.eclipse.orion.server.config");
+
 	/**
 	 * Create an instance of a SimpleMetaStore under the provided folder.
 	 * 
@@ -158,8 +160,8 @@ public class SimpleMetaStore implements IMetaStore {
 			JSONObject properties = updateProperties(jsonObject, projectInfo);
 			jsonObject.put("Properties", properties);
 		} catch (JSONException e) {
-			throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.createProject: could not create project: "
-					+ projectInfo.getFullName() + " for user " + userId, e));
+			throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1,
+					"SimpleMetaStore.createProject: could not create project: " + projectInfo.getFullName() + " for user " + userId, e));
 		}
 		File userMetaFolder = SimpleMetaStoreUtil.readMetaUserFolder(getRootLocation(), userId);
 		File workspaceMetaFolder = SimpleMetaStoreUtil.readMetaFolder(userMetaFolder, encodedWorkspaceName);
@@ -172,8 +174,8 @@ public class SimpleMetaStore implements IMetaStore {
 			}
 		}
 		if (!SimpleMetaStoreUtil.createMetaFile(userMetaFolder, projectId, jsonObject)) {
-			throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.createProject: could not create project: "
-					+ projectInfo.getFullName() + " for user " + userId, null));
+			throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1,
+					"SimpleMetaStore.createProject: could not create project: " + projectInfo.getFullName() + " for user " + userId, null));
 		}
 
 		// Update the workspace with the new projectName
@@ -197,8 +199,8 @@ public class SimpleMetaStore implements IMetaStore {
 			userInfo.setUniqueId(userId);
 			File userMetaFolder = SimpleMetaStoreUtil.readMetaUserFolder(getRootLocation(), userId);
 			if (SimpleMetaStoreUtil.isMetaFolder(getRootLocation(), userId)) {
-				throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.createUser: could not create user: "
-						+ userId + ", user already exists", null));
+				throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1,
+						"SimpleMetaStore.createUser: could not create user: " + userId + ", user already exists", null));
 			}
 			JSONObject jsonObject = new JSONObject();
 			try {
@@ -206,39 +208,34 @@ public class SimpleMetaStore implements IMetaStore {
 				jsonObject.put(MetadataInfo.UNIQUE_ID, userId);
 				jsonObject.put(UserConstants.USER_NAME, userId);
 				jsonObject.put(UserConstants.FULL_NAME, userInfo.getFullName());
-				
-				//Added by Jon
-				jsonObject.put(UserConstants.HOME_WIKI, userInfo.getHomeWiki());
-				
 				jsonObject.put("WorkspaceIds", new JSONArray());
 				JSONObject properties = updateProperties(jsonObject, userInfo);
 				jsonObject.put("Properties", properties);
 			} catch (JSONException e) {
-				throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.createUser: could not create user: "
-						+ userId, e));
+				throw new CoreException(
+						new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.createUser: could not create user: " + userId, e));
 			}
 			if (!SimpleMetaStoreUtil.createMetaUserFolder(getRootLocation(), userId)) {
-				throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.createUser: could not create user: "
-						+ userId, null));
+				throw new CoreException(
+						new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.createUser: could not create user: " + userId, null));
 			}
 			if (SimpleMetaStoreUtil.isMetaFile(userMetaFolder, SimpleMetaStore.USER)) {
 				// If the file already exists then update with the new contents
 				if (!SimpleMetaStoreUtil.updateMetaFile(userMetaFolder, SimpleMetaStore.USER, jsonObject)) {
-					throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.createUser: could not create user: "
-							+ userId, null));
+					throw new CoreException(
+							new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.createUser: could not create user: " + userId, null));
 				}
 			} else {
 				if (!SimpleMetaStoreUtil.createMetaFile(userMetaFolder, SimpleMetaStore.USER, jsonObject)) {
-					throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.createUser: could not create user: "
-							+ userId, null));
+					throw new CoreException(
+							new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.createUser: could not create user: " + userId, null));
 				}
 			}
 			// update the UniqueId cache
 			if (userPropertyCache.isRegistered(UserConstants.USER_NAME)) {
 				userPropertyCache.add(UserConstants.USER_NAME, userId, userId);
 			}
-			Logger logger = LoggerFactory.getLogger("org.eclipse.orion.server.config"); //$NON-NLS-1$
-			logger.debug("Created new user " + userId + " === " + userInfo.getHomeWiki()); //$NON-NLS-1$
+			logger.debug("Created new user " + userId + "."); //$NON-NLS-1$
 		} finally {
 			lock.writeLock().unlock();
 		}
@@ -250,12 +247,11 @@ public class SimpleMetaStore implements IMetaStore {
 			throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.createWorkspace: user id is null.", null));
 		}
 		if (workspaceInfo.getFullName() == null) {
-			throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.createWorkspace: workspace name is null.",
-					null));
+			throw new CoreException(
+					new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.createWorkspace: workspace name is null.", null));
 		}
 		if (!SimpleMetaStore.DEFAULT_WORKSPACE_NAME.equals(workspaceInfo.getFullName())) {
 			// The workspace name you create must be Orion Content. See Bug 439735
-			Logger logger = LoggerFactory.getLogger("org.eclipse.orion.server.config"); //$NON-NLS-1$
 			logger.info("SimpleMetaStore.createWorkspace: workspace name conflict: name will be \"Orion Content\": user " + workspaceInfo.getUserId()
 					+ " provided " + workspaceInfo.getFullName() + " instead.");
 			workspaceInfo.setFullName(SimpleMetaStore.DEFAULT_WORKSPACE_NAME);
@@ -274,7 +270,6 @@ public class SimpleMetaStore implements IMetaStore {
 		if (!userInfo.getWorkspaceIds().isEmpty()) {
 			// We have an existing workspace already, you cannot create a second workspace. See Bug 439735
 			String existingWorkspaceIds = userInfo.getWorkspaceIds().get(0);
-			Logger logger = LoggerFactory.getLogger("org.eclipse.orion.server.config"); //$NON-NLS-1$
 			logger.info("SimpleMetaStore.createWorkspace: workspace conflict: cannot create a second workspace for user id: " + userInfo.getUniqueId()
 					+ ", existing workspace is being used: " + existingWorkspaceIds);
 			workspaceInfo.setUniqueId(existingWorkspaceIds);
@@ -310,7 +305,6 @@ public class SimpleMetaStore implements IMetaStore {
 			}
 			if (SimpleMetaStoreUtil.isMetaFile(userMetaFolder, workspaceId)) {
 				File workspaceMetaFile = SimpleMetaStoreUtil.retrieveMetaFile(userMetaFolder, workspaceId);
-				Logger logger = LoggerFactory.getLogger("org.eclipse.orion.server.config"); //$NON-NLS-1$
 				logger.info("SimpleMetaStore.createWorkspace: workspace conflict: while creating a workspace for user id: " + userInfo.getUniqueId()
 						+ ", found existing workspace json, will not overwrite: " + workspaceMetaFile.toString());
 			} else {
@@ -355,8 +349,8 @@ public class SimpleMetaStore implements IMetaStore {
 
 		String projectId = SimpleMetaStoreUtil.encodeProjectIdFromProjectName(projectName);
 		if (!SimpleMetaStoreUtil.deleteMetaFile(userMetaFolder, projectId)) {
-			throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.deleteProject: could not delete project: "
-					+ projectName + " for user " + userId, null));
+			throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1,
+					"SimpleMetaStore.deleteProject: could not delete project: " + projectName + " for user " + userId, null));
 		}
 		if (SimpleMetaStoreUtil.isMetaFolder(workspaceMetaFolder, projectId)) {
 			// delete the project folder since it still exists
@@ -387,12 +381,12 @@ public class SimpleMetaStore implements IMetaStore {
 
 			File userMetaFolder = SimpleMetaStoreUtil.readMetaUserFolder(getRootLocation(), userId);
 			if (!SimpleMetaStoreUtil.deleteMetaFile(userMetaFolder, SimpleMetaStore.USER)) {
-				throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.deleteUser: could not delete user: "
-						+ userId, null));
+				throw new CoreException(
+						new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.deleteUser: could not delete user: " + userId, null));
 			}
 			if (!SimpleMetaStoreUtil.deleteMetaUserFolder(userMetaFolder, userId)) {
-				throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.deleteUser: could not delete user: "
-						+ userId, null));
+				throw new CoreException(
+						new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.deleteUser: could not delete user: " + userId, null));
 			}
 			// update the userid cache
 			userPropertyCache.deleteUser(userId);
@@ -440,12 +434,12 @@ public class SimpleMetaStore implements IMetaStore {
 	@Override
 	public IFileStore getDefaultContentLocation(ProjectInfo projectInfo) throws CoreException {
 		if (projectInfo.getWorkspaceId() == null) {
-			throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1,
-					"SimpleMetaStore.getDefaultContentLocation: workspace id is null.", null));
+			throw new CoreException(
+					new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.getDefaultContentLocation: workspace id is null.", null));
 		}
 		if (projectInfo.getFullName() == null) {
-			throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1,
-					"SimpleMetaStore.getDefaultContentLocation: project name is null.", null));
+			throw new CoreException(
+					new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.getDefaultContentLocation: project name is null.", null));
 		}
 		IFileStore workspaceFolder = getWorkspaceContentLocation(projectInfo.getWorkspaceId());
 		String projectId = SimpleMetaStoreUtil.encodeProjectIdFromProjectName(projectInfo.getFullName());
@@ -488,7 +482,7 @@ public class SimpleMetaStore implements IMetaStore {
 	/**
 	 * Gets the properties in the provided MetaDataInfo.
 	 * 
-	 * @param metadataInfo
+	 * @param userInfo
 	 *            The MetaData info
 	 * @return the JSON with a list of properties.
 	 * @throws JSONException
@@ -520,8 +514,8 @@ public class SimpleMetaStore implements IMetaStore {
 	@Override
 	public IFileStore getWorkspaceContentLocation(String workspaceId) throws CoreException {
 		if (workspaceId == null) {
-			throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1,
-					"SimpleMetaStore.getWorkspaceContentLocation: workspace id is null.", null));
+			throw new CoreException(
+					new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.getWorkspaceContentLocation: workspace id is null.", null));
 		}
 		String userId = SimpleMetaStoreUtil.decodeUserIdFromWorkspaceId(workspaceId);
 		String encodedWorkspaceName = SimpleMetaStoreUtil.decodeWorkspaceNameFromWorkspaceId(workspaceId);
@@ -540,7 +534,6 @@ public class SimpleMetaStore implements IMetaStore {
 	 * @throws CoreException
 	 */
 	protected void initializeMetaStore(File rootLocation) throws CoreException {
-		Logger logger = LoggerFactory.getLogger("org.eclipse.orion.server.config"); //$NON-NLS-1$
 		if (!SimpleMetaStoreUtil.isMetaFile(rootLocation, SimpleMetaStore.ROOT)) {
 			// the root metastore.json file does not exist, create a new root metastore.json file
 			JSONObject jsonObject = new JSONObject();
@@ -576,7 +569,8 @@ public class SimpleMetaStore implements IMetaStore {
 					// we are running an old server on metadata that is at a newer version
 					throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1,
 							"SimpleMetaStore.initializeMetaStore: cannot run an old server (version " + SimpleMetaStore.VERSION
-									+ ") on metadata that is at a newer version (version " + version + ")", null));
+									+ ") on metadata that is at a newer version (version " + version + ")",
+							null));
 				}
 			} catch (JSONException e) {
 				logger.error("SimpleMetaStore.initializeMetaStore: JSON error.", e);
@@ -589,8 +583,10 @@ public class SimpleMetaStore implements IMetaStore {
 
 	@Override
 	public List<String> readAllUsers() throws CoreException {
+		long start = System.currentTimeMillis();
 		List<String> userIds = SimpleMetaStoreUtil.listMetaUserFolders(getRootLocation());
 		userPropertyCache.addUsers(userIds);
+		logger.info("Finished reading " + userIds.size() + " users, duration: " + (System.currentTimeMillis() - start) + "ms");
 		return userIds;
 	}
 
@@ -598,7 +594,6 @@ public class SimpleMetaStore implements IMetaStore {
 	public ProjectInfo readProject(String workspaceId, String projectName) throws CoreException {
 		String userId = SimpleMetaStoreUtil.decodeUserIdFromWorkspaceId(workspaceId);
 		if (userId == null) {
-			Logger logger = LoggerFactory.getLogger("org.eclipse.orion.server.config"); //$NON-NLS-1$
 			if (logger.isDebugEnabled()) {
 				logger.debug("SimpleMetaStore.readProject: requested with a bad userId in the workspaceId " + workspaceId); //$NON-NLS-1$
 			}
@@ -606,7 +601,6 @@ public class SimpleMetaStore implements IMetaStore {
 		}
 		String encodedWorkspaceName = SimpleMetaStoreUtil.decodeWorkspaceNameFromWorkspaceId(workspaceId);
 		if (encodedWorkspaceName == null) {
-			Logger logger = LoggerFactory.getLogger("org.eclipse.orion.server.config"); //$NON-NLS-1$
 			if (logger.isDebugEnabled()) {
 				logger.debug("SimpleMetaStore.readProject: requested with a bad workspaceId " + workspaceId); //$NON-NLS-1$
 			}
@@ -615,7 +609,6 @@ public class SimpleMetaStore implements IMetaStore {
 		File userMetaFolder = SimpleMetaStoreUtil.readMetaUserFolder(getRootLocation(), userId);
 		File workspaceMetaFolder = SimpleMetaStoreUtil.readMetaFolder(userMetaFolder, encodedWorkspaceName);
 		if (workspaceMetaFolder == null) {
-			Logger logger = LoggerFactory.getLogger("org.eclipse.orion.server.config"); //$NON-NLS-1$
 			if (logger.isDebugEnabled()) {
 				logger.debug("SimpleMetaStore.readProject: workspaceMetaFolder does not exist for workspace " + workspaceId); //$NON-NLS-1$
 			}
@@ -628,9 +621,9 @@ public class SimpleMetaStore implements IMetaStore {
 			if (SimpleMetaStoreUtil.isMetaFolder(workspaceMetaFolder, projectId) && !SimpleMetaStoreUtil.isMetaFile(userMetaFolder, projectId)) {
 				// the project folder exists but the project json file does not, so create it
 				File projectMetaFolder = SimpleMetaStoreUtil.readMetaFolder(workspaceMetaFolder, projectId);
-				Logger logger = LoggerFactory.getLogger("org.eclipse.orion.server.config"); //$NON-NLS-1$
 				if (logger.isDebugEnabled()) {
-					logger.info("SimpleMetaStore.readProject: the project folder " + projectMetaFolder.toString() + " exists but the project json file does not, so creating it in " + workspaceId); //$NON-NLS-1$
+					logger.info("SimpleMetaStore.readProject: the project folder " + projectMetaFolder.toString() //$NON-NLS-1$
+							+ " exists but the project json file does not, so creating it in " + workspaceId);
 				}
 				URI projectLocation = projectMetaFolder.toURI();
 				projectInfo.setFullName(projectName);
@@ -648,9 +641,6 @@ public class SimpleMetaStore implements IMetaStore {
 			projectInfo.setUniqueId(jsonObject.getString(MetadataInfo.UNIQUE_ID));
 			projectInfo.setWorkspaceId(jsonObject.getString("WorkspaceId"));
 			projectInfo.setFullName(jsonObject.getString(UserConstants.FULL_NAME));
-			//Added by Jon, do I need this here?
-//			projectInfo.setHomeWiki(jsonObject.getString(UserConstants.HOME_WIKI));
-			
 			if (jsonObject.has("ContentLocation")) {
 				String decodedContentLocation = SimpleMetaStoreUtil.decodeProjectContentLocation(jsonObject.getString("ContentLocation"));
 				projectInfo.setContentLocation(new URI(decodedContentLocation));
@@ -658,11 +648,11 @@ public class SimpleMetaStore implements IMetaStore {
 			setProperties(projectInfo, jsonObject.getJSONObject("Properties"));
 			projectInfo.flush();
 		} catch (JSONException e) {
-			throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.readProject: could not read project "
-					+ projectName + " for userId " + userId, e));
+			throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1,
+					"SimpleMetaStore.readProject: could not read project " + projectName + " for userId " + userId, e));
 		} catch (URISyntaxException e) {
-			throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.readProject: could not read project "
-					+ projectName + " for userId " + userId, e));
+			throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1,
+					"SimpleMetaStore.readProject: could not read project " + projectName + " for userId " + userId, e));
 		}
 		return projectInfo;
 	}
@@ -679,7 +669,6 @@ public class SimpleMetaStore implements IMetaStore {
 			if (SimpleMetaStoreUtil.isMetaFile(userMetaFolder, SimpleMetaStore.USER)) {
 				JSONObject jsonObject = SimpleMetaStoreUtil.readMetaFile(userMetaFolder, SimpleMetaStore.USER);
 				if (jsonObject == null) {
-					Logger logger = LoggerFactory.getLogger("org.eclipse.orion.server.config"); //$NON-NLS-1$
 					logger.info("SimpleMetaStore.readUser: could not read user " + userId); //$NON-NLS-1$
 					return null;
 				}
@@ -687,7 +676,6 @@ public class SimpleMetaStore implements IMetaStore {
 				try {
 					SimpleMetaStoreMigration migration = new SimpleMetaStoreMigration();
 					if (migration.isMigrationRequired(jsonObject)) {
-						Logger logger = LoggerFactory.getLogger("org.eclipse.orion.server.config"); //$NON-NLS-1$
 						logger.info("Migration: Migration required for user " + userId + " to the latest (version " + SimpleMetaStore.VERSION + ")");
 						// Migration to the latest version is required for this user
 						lock.readLock().unlock();
@@ -713,15 +701,6 @@ public class SimpleMetaStore implements IMetaStore {
 					} else {
 						userInfo.setFullName(jsonObject.getString(UserConstants.FULL_NAME));
 					}
-					
-					//Added by Jon
-//					userInfo.setHomeWiki(jsonObject.getString(UserConstants.HOME_WIKI));
-//					if (jsonObject.isNull(UserConstants.HOME_WIKI)) {
-//						userInfo.setHomeWiki("Unassigned");
-//					}else {
-//						userInfo.setHomeWiki(jsonObject.getString(UserConstants.HOME_WIKI));
-//					}
-					
 					List<String> userWorkspaceIds = new ArrayList<String>();
 					JSONArray workspaceIds = jsonObject.getJSONArray("WorkspaceIds");
 					if (workspaceIds.length() > 0) {
@@ -732,15 +711,14 @@ public class SimpleMetaStore implements IMetaStore {
 					userInfo.setWorkspaceIds(userWorkspaceIds);
 					if (userInfo.getWorkspaceIds().size() > 1) {
 						// It is currently unexpected that a user has more than one workspace. See Bug 439735
-						Logger logger = LoggerFactory.getLogger("org.eclipse.orion.server.config"); //$NON-NLS-1$
 						logger.warn("SimpleMetaStore.readUser: user id " + userInfo.getUniqueId() + " has a multiple workspace conflict: workspace: "
 								+ userInfo.getWorkspaceIds().get(0) + " and workspace: " + userInfo.getWorkspaceIds().get(1));
 					}
 					setProperties(userInfo, jsonObject.getJSONObject("Properties"));
 					userInfo.flush();
 				} catch (JSONException e) {
-					throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.readUser: could not read user "
-							+ userId, e));
+					throw new CoreException(
+							new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.readUser: could not read user " + userId, e));
 				}
 				return userInfo;
 			}
@@ -753,7 +731,6 @@ public class SimpleMetaStore implements IMetaStore {
 		userInfo.setUniqueId(userId);
 		userInfo.setUserName(userId);
 		userInfo.setFullName("Unnamed User");
-		userInfo.setHomeWiki("");
 		createUser(userInfo);
 		return userInfo;
 	}
@@ -813,8 +790,8 @@ public class SimpleMetaStore implements IMetaStore {
 			setProperties(workspaceInfo, jsonObject.getJSONObject("Properties"));
 			workspaceInfo.flush();
 		} catch (JSONException e) {
-			throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.readWorkspace: could not read workspace "
-					+ encodedWorkspaceName + " for user id " + userId, e));
+			throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1,
+					"SimpleMetaStore.readWorkspace: could not read workspace " + encodedWorkspaceName + " for user id " + userId, e));
 		}
 		return workspaceInfo;
 	}
@@ -825,14 +802,14 @@ public class SimpleMetaStore implements IMetaStore {
 		userPropertyCache.register(keys);
 		if (!(keys.contains(UserConstants.USER_NAME) && keys.size() == 1)) {
 			// initialize the user property cache with values from disk
+			long start = System.currentTimeMillis();
 			initializeAllRegisteredPropertiesFromDisk();
+			logger.info("registerUserProperties duration: " + (System.currentTimeMillis() - start) + "ms");
 		}
 	}
 
 	/**
 	 * Initialize the user properties cache for properties other than user name.
-	 * 
-	 * @throws JSONException
 	 */
 	private void initializeAllRegisteredPropertiesFromDisk() {
 		for (String user : SimpleMetaStoreUtil.listMetaUserFolders(rootLocation)) {
@@ -842,7 +819,6 @@ public class SimpleMetaStore implements IMetaStore {
 			try {
 				properties = jsonObject.getJSONObject("Properties");
 			} catch (JSONException e) {
-				Logger logger = LoggerFactory.getLogger("org.eclipse.orion.server.config"); //$NON-NLS-1$
 				logger.error("SimpleMetaStore.initializeAllRegisteredPropertiesFromDisk: failed reading metafile for user " + user, e);
 			}
 
@@ -852,7 +828,6 @@ public class SimpleMetaStore implements IMetaStore {
 			try {
 				setProperties(info, properties);
 			} catch (JSONException e) {
-				Logger logger = LoggerFactory.getLogger("org.eclipse.orion.server.config"); //$NON-NLS-1$
 				logger.error("SimpleMetaStore.initializeAllRegisteredPropertiesFromDisk: failed reading properties for user " + user, e);
 			}
 		}
@@ -898,8 +873,8 @@ public class SimpleMetaStore implements IMetaStore {
 		File userMetaFolder = SimpleMetaStoreUtil.readMetaUserFolder(getRootLocation(), userId);
 		File workspaceMetaFolder = SimpleMetaStoreUtil.readMetaFolder(userMetaFolder, encodedWorkspaceName);
 		if (!SimpleMetaStoreUtil.isMetaFile(userMetaFolder, projectInfo.getUniqueId())) {
-			throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.updateProject: could not update project: "
-					+ projectInfo.getFullName() + " for workspace " + encodedWorkspaceName, null));
+			throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1,
+					"SimpleMetaStore.updateProject: could not update project: " + projectInfo.getFullName() + " for workspace " + encodedWorkspaceName, null));
 		}
 		JSONObject jsonObject = SimpleMetaStoreUtil.readMetaFile(userMetaFolder, projectInfo.getUniqueId());
 		if (!projectInfo.getUniqueId().equals(SimpleMetaStoreUtil.encodeProjectIdFromProjectName(projectInfo.getFullName()))) {
@@ -981,12 +956,12 @@ public class SimpleMetaStore implements IMetaStore {
 			JSONObject properties = updateProperties(jsonObject, projectInfo);
 			jsonObject.put("Properties", properties);
 		} catch (JSONException e) {
-			throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.updateProject: could not update project: "
-					+ projectInfo.getFullName() + " for workspace " + encodedWorkspaceName, null));
+			throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1,
+					"SimpleMetaStore.updateProject: could not update project: " + projectInfo.getFullName() + " for workspace " + encodedWorkspaceName, null));
 		}
 		if (!SimpleMetaStoreUtil.updateMetaFile(userMetaFolder, projectInfo.getUniqueId(), jsonObject)) {
-			throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.updateProject: could not update project: "
-					+ projectInfo.getFullName() + " for workspace " + encodedWorkspaceName, null));
+			throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1,
+					"SimpleMetaStore.updateProject: could not update project: " + projectInfo.getFullName() + " for workspace " + encodedWorkspaceName, null));
 		}
 	}
 
@@ -1104,19 +1079,22 @@ public class SimpleMetaStore implements IMetaStore {
 					}
 					setProperties(userInfo, properties);
 				} catch (JSONException e) {
-					throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.updateUser: user name "
-							+ userInfo.getUserName() + " already exists, cannot rename from " + userInfo.getUniqueId(), e));
+					throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1,
+							"SimpleMetaStore.updateUser: user name " + userInfo.getUserName() + " already exists, cannot rename from " + userInfo.getUniqueId(),
+							e));
 				}
 				userInfo.setWorkspaceIds(newWorkspaceIds);
 
 				// move the user folder to the new location
 				if (SimpleMetaStoreUtil.isMetaUserFolder(getRootLocation(), newUserId)) {
-					throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.updateUser: user name "
-							+ userInfo.getUserName() + " already exists, cannot rename from " + userInfo.getUniqueId(), null));
+					throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1,
+							"SimpleMetaStore.updateUser: user name " + userInfo.getUserName() + " already exists, cannot rename from " + userInfo.getUniqueId(),
+							null));
 				}
 				if (!SimpleMetaStoreUtil.isMetaUserFolder(getRootLocation(), oldUserId)) {
-					throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.updateUser: user name "
-							+ userInfo.getUniqueId() + " does not exist, cannot rename to " + userInfo.getUserName(), null));
+					throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1,
+							"SimpleMetaStore.updateUser: user name " + userInfo.getUniqueId() + " does not exist, cannot rename to " + userInfo.getUserName(),
+							null));
 				}
 				File oldUserMetaFolder = SimpleMetaStoreUtil.readMetaUserFolder(getRootLocation(), oldUserId);
 				File newUserMetaFolder = SimpleMetaStoreUtil.readMetaUserFolder(getRootLocation(), newUserId);
@@ -1130,7 +1108,6 @@ public class SimpleMetaStore implements IMetaStore {
 					userPropertyCache.add(UserConstants.USER_NAME, newUserId, newUserId);
 				}
 
-				Logger logger = LoggerFactory.getLogger("org.eclipse.orion.server.config"); //$NON-NLS-1$
 				logger.debug("Moved MetaStore for user " + oldUserId + " to user " + newUserId + "."); //$NON-NLS-1$
 
 			} finally {
@@ -1145,28 +1122,24 @@ public class SimpleMetaStore implements IMetaStore {
 			File userMetaFolder = SimpleMetaStoreUtil.readMetaUserFolder(getRootLocation(), userId);
 			JSONObject jsonObject = SimpleMetaStoreUtil.readMetaFile(userMetaFolder, SimpleMetaStore.USER);
 			if (jsonObject == null) {
-				throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.updateUser: could not find user "
-						+ userId, null));
+				throw new CoreException(
+						new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.updateUser: could not find user " + userId, null));
 			}
 			try {
 				jsonObject.put(MetadataInfo.UNIQUE_ID, userInfo.getUniqueId());
 				jsonObject.put(UserConstants.USER_NAME, userInfo.getUserName());
 				jsonObject.put(UserConstants.FULL_NAME, userInfo.getFullName());
-				
-				//Added by Jon
-				jsonObject.put(UserConstants.HOME_WIKI, userInfo.getHomeWiki());
-				
 				JSONArray workspaceIds = new JSONArray(userInfo.getWorkspaceIds());
 				jsonObject.put("WorkspaceIds", workspaceIds);
 				JSONObject properties = updateProperties(jsonObject, userInfo);
 				jsonObject.put("Properties", properties);
 			} catch (JSONException e) {
-				throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.updateUser: could not update user: "
-						+ userId, e));
+				throw new CoreException(
+						new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.updateUser: could not update user: " + userId, e));
 			}
 			if (!SimpleMetaStoreUtil.updateMetaFile(userMetaFolder, SimpleMetaStore.USER, jsonObject)) {
-				throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.updateUser: could not update user: "
-						+ userId, null));
+				throw new CoreException(
+						new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.updateUser: could not update user: " + userId, null));
 			}
 		} finally {
 			lock.writeLock().unlock();
@@ -1189,12 +1162,12 @@ public class SimpleMetaStore implements IMetaStore {
 				renameUser = true;
 				newWorkspaceId = SimpleMetaStoreUtil.encodeWorkspaceId(workspaceInfo.getUserId(), encodedWorkspaceName);
 			}
-			
+
 			File userMetaFolder = SimpleMetaStoreUtil.readMetaUserFolder(getRootLocation(), userId);
 			JSONObject jsonObject = SimpleMetaStoreUtil.readMetaFile(userMetaFolder, workspaceInfo.getUniqueId());
 			if (jsonObject == null) {
-				throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1, "SimpleMetaStore.updateWorkspace: could not find workspace "
-						+ workspaceInfo.getUniqueId(), null));
+				throw new CoreException(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, 1,
+						"SimpleMetaStore.updateWorkspace: could not find workspace " + workspaceInfo.getUniqueId(), null));
 			}
 			try {
 				jsonObject.put(SimpleMetaStore.ORION_VERSION, VERSION);

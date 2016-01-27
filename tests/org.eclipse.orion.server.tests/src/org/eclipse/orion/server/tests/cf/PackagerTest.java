@@ -88,6 +88,7 @@ public class PackagerTest {
 
 		/* what is... */
 		verify(mockZos).putNextEntry(argThat(new ZipArgumentMatcher(new ZipEntry(".cfignore")))); //$NON-NLS-1$
+		verify(mockZos).putNextEntry(argThat(new ZipArgumentMatcher(new ZipEntry("A/B/.cfignore")))); //$NON-NLS-1$
 		verify(mockZos).putNextEntry(argThat(new ZipArgumentMatcher(new ZipEntry("A/B/test.in")))); //$NON-NLS-1$
 
 		/* ... and what should never be */

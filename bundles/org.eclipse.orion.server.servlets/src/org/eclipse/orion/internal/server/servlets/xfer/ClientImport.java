@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2011, 2012 IBM Corporation and others.
+ * Copyright (c) 2011, 2014 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -194,7 +194,7 @@ class ClientImport {
 					destination.getParent().mkdir(EFS.NONE, null);
 					// this filter will throw an IOException if a zip entry is larger than 100MB
 					FilterInputStream maxBytesReadInputStream = new FilterInputStream(source.getInputStream(entry)) {
-						private static final int maxBytes = 0x6400000; // 100MB
+						private static final int maxBytes = 0xFF00000; // 100MB
 						private int totalBytes;
 
 						private void addByteCount(int count) throws IOException {

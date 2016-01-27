@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2011, 2014 IBM Corporation and others.
+ * Copyright (c) 2011, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -23,6 +23,7 @@ import org.eclipse.jgit.api.CreateBranchCommand;
 import org.eclipse.jgit.api.CreateBranchCommand.SetupUpstreamMode;
 import org.eclipse.jgit.api.DeleteBranchCommand;
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.errors.RefAlreadyExistsException;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.orion.internal.server.servlets.ServletResourceHandler;
@@ -74,7 +75,7 @@ public class GitBranchHandlerV1 extends AbstractGitHandler {
 				return TaskJobHandler.handleTaskJob(request, response, job, statusHandler, JsonURIUnqualificationStrategy.ALL_NO_GIT);
 			}
 			// branch details: expected path /git/branch/{name}/file/{filePath}
-			List<Ref> branches = new Git(db).branchList().call();
+			List<Ref> branches = Git.wrap(db).branchList().call();
 			JSONObject result = null;
 			URI cloneLocation = BaseToCloneConverter.getCloneLocation(getURI(request), BaseToCloneConverter.BRANCH);
 			for (Ref ref : branches) {
@@ -121,7 +122,7 @@ public class GitBranchHandlerV1 extends AbstractGitHandler {
 					}
 				}
 
-				CreateBranchCommand cc = new Git(db).branchCreate();
+				CreateBranchCommand cc = Git.wrap(db).branchCreate();
 				cc.setName(branchName);
 
 				if (startPoint != null && !startPoint.isEmpty()) {
@@ -140,6 +141,9 @@ public class GitBranchHandlerV1 extends AbstractGitHandler {
 			}
 			String msg = NLS.bind("Failed to create a branch for {0}", filePath); //$NON-NLS-1$
 			return statusHandler.handleRequest(request, response, new ServerStatus(IStatus.ERROR, HttpServletResponse.SC_BAD_REQUEST, msg, null));
+		} catch (RefAlreadyExistsException e){
+			return statusHandler.handleRequest(request, response, new ServerStatus(IStatus.ERROR, HttpServletResponse.SC_CONFLICT,
+					"Ref already exists", new Exception(e.getMessage()+", please use another branch name")));
 		} catch (Exception e) {
 			return statusHandler.handleRequest(request, response, new ServerStatus(IStatus.ERROR, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
 					"An error occured when creating a branch.", e));

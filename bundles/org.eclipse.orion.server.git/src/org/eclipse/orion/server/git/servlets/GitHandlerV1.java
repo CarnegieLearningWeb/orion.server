@@ -29,9 +29,11 @@ import org.eclipse.orion.server.git.objects.ConfigOption;
 import org.eclipse.orion.server.git.objects.Diff;
 import org.eclipse.orion.server.git.objects.Ignore;
 import org.eclipse.orion.server.git.objects.Index;
+import org.eclipse.orion.server.git.objects.PullRequest;
 import org.eclipse.orion.server.git.objects.Remote;
 import org.eclipse.orion.server.git.objects.Stash;
 import org.eclipse.orion.server.git.objects.Status;
+import org.eclipse.orion.server.git.objects.Submodule;
 import org.eclipse.orion.server.git.objects.Tag;
 import org.eclipse.orion.server.git.objects.Tree;
 
@@ -53,7 +55,9 @@ public class GitHandlerV1 extends ServletResourceHandler<String> {
 	private ServletResourceHandler<String> blameHandlerV1;
 	private ServletResourceHandler<String> treeHandlerV1;
 	private ServletResourceHandler<String> stashHandlerV1;
-
+	private ServletResourceHandler<String> submoduleHandlerV1;
+	private ServletResourceHandler<String> pullRequestHandlerV1;
+	
 	GitHandlerV1(ServletResourceHandler<IStatus> statusHandler) {
 		branchHandlerV1 = new GitBranchHandlerV1(statusHandler);
 		blameHandlerV1 = new GitBlameHandlerV1(statusHandler);
@@ -68,6 +72,8 @@ public class GitHandlerV1 extends ServletResourceHandler<String> {
 		tagHandlerV1 = new GitTagHandlerV1(statusHandler);
 		treeHandlerV1 = new GitTreeHandlerV1(statusHandler);
 		stashHandlerV1 = new GitStashHandlerV1(statusHandler);
+		submoduleHandlerV1 = new GitSubmoduleHandlerV1(statusHandler);
+		pullRequestHandlerV1 = new GitPullRequestHandlerV1(statusHandler);
 	}
 
 	@Override
@@ -127,6 +133,10 @@ public class GitHandlerV1 extends ServletResourceHandler<String> {
 			return treeHandlerV1.handleRequest(request, response, pathString);
 		} else if (infoParts[1].equals(Stash.RESOURCE)) {
 			return stashHandlerV1.handleRequest(request, response, pathString);
+		} else if (infoParts[1].equals(Submodule.RESOURCE)) {
+			return submoduleHandlerV1.handleRequest(request, response, pathString);
+		} else if (infoParts[1].equals(PullRequest.RESOURCE)) {
+			return pullRequestHandlerV1.handleRequest(request, response, pathString);
 		}
 
 		return false;

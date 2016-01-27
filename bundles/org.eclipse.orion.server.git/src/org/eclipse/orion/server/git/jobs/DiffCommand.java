@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, Tomasz Zarna <Tomasz.Zarna@pl.ibm.com>
+ * Copyright (C) 2011, 2015, Tomasz Zarna <Tomasz.Zarna@pl.ibm.com>
  * and other copyright owners as documented in the project's IP log.
  *
  * This program and the accompanying materials are made available
@@ -132,7 +132,7 @@ public class DiffCommand extends GitCommand<List<DiffEntry>> {
 					try {
 						p.reset(reader, head);
 					} finally {
-						reader.release();
+						reader.close();
 					}
 					oldTree = p;
 				}
@@ -163,7 +163,7 @@ public class DiffCommand extends GitCommand<List<DiffEntry>> {
 		} catch (IOException e) {
 			throw new JGitInternalException(e.getMessage(), e);
 		} finally {
-			diffFmt.release();
+			diffFmt.close();
 		}
 	}
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2011, 2014 IBM Corporation and others.
+ * Copyright (c) 2011, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -121,7 +121,7 @@ public class GitIndexHandlerV1 extends ServletResourceHandler<String> {
 			paths = new JSONArray().put(pattern.isEmpty() ? ADD_ALL_PATTERN : pattern);
 		}
 
-		Git git = new Git(db);
+		Git git = Git.wrap(db);
 		AddCommand add = git.add();
 		for (int i = 0; i < paths.length(); i++) {
 			add.addFilepattern(paths.getString(i));
@@ -167,7 +167,7 @@ public class GitIndexHandlerV1 extends ServletResourceHandler<String> {
 				case MIXED:
 				case HARD:
 				case SOFT:
-					Git git = new Git(db);
+					Git git = Git.wrap(db);
 					// "git reset --{type} HEAD ."
 					try {
 						git.reset().setMode(type).setRef(ref).call();
@@ -193,7 +193,7 @@ public class GitIndexHandlerV1 extends ServletResourceHandler<String> {
 				return statusHandler.handleRequest(request, response, new ServerStatus(IStatus.ERROR, HttpServletResponse.SC_BAD_REQUEST, msg, null));
 			}
 			JSONArray paths = toReset.optJSONArray(ProtocolConstants.KEY_PATH);
-			Git git = new Git(db);
+			Git git = Git.wrap(db);
 			ResetCommand reset = git.reset().setRef(Constants.HEAD);
 			if (paths != null) {
 				for (int i = 0; i < paths.length(); i++) {

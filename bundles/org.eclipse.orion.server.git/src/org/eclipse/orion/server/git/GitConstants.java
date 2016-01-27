@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2011, 2013 IBM Corporation and others.
+ * Copyright (c) 2011, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -30,6 +30,8 @@ public class GitConstants {
 	public static final String KEY_IGNORE = "IgnoreLocation"; //$NON-NLS-1$
 
 	public static final String KEY_STASH = "StashLocation"; //$NON-NLS-1$
+	
+	public static final String KEY_PULL_REQUEST_LOCATION = "PullRequestLocation"; //$NON-NLS-1$
 
 	public static final String KEY_COMMIT = "CommitLocation"; //$NON-NLS-1$
 
@@ -42,6 +44,10 @@ public class GitConstants {
 	public static final String KEY_DEFAULT_REMOTE_BRANCH = "DefaultRemoteBranchLocation"; //$NON-NLS-1$
 
 	public static final String KEY_TAG = "TagLocation"; //$NON-NLS-1$
+	
+	public static final String KEY_SUBMODULE = "SubmoduleLocation"; //$NON-NLS-1$
+	
+	public static final String KEY_IS_SUBMODULE = "IsSubmodule"; //$NON-NLS-1$
 
 	public static final String KEY_HEAD = "HeadLocation"; //$NON-NLS-1$
 
@@ -110,6 +116,8 @@ public class GitConstants {
 	public static final String KEY_COMMIT_DIFF_OLDPATH = "OldPath"; //$NON-NLS-1$
 
 	public static final String KEY_COMMIT_DIFF_CHANGETYPE = "ChangeType"; //$NON-NLS-1$
+	
+	public static final String KEY_COMMIT_HEAD = "Head"; //$NON-NLS-1$
 
 	public static final String KEY_TAGS = "Tags"; //$NON-NLS-1$
 
@@ -127,6 +135,8 @@ public class GitConstants {
 
 	public static final String KEY_TAG_NAME = "Tag"; //$NON-NLS-1$
 
+	public static final String KEY_HEAD_SHA = "HeadSHA"; //$NON-NLS-1$
+	
 	public static final String KEY_REMOTE_NAME = "Remote"; //$NON-NLS-1$
 
 	public static final String KEY_REMOTE_URI = "RemoteURI"; //$NON-NLS-1$
@@ -138,6 +148,8 @@ public class GitConstants {
 	public static final String KEY_REMOTE_FETCH_REF = "FetchRefSpec"; //$NON-NLS-1$
 
 	public static final String KEY_BRANCH_CURRENT = "Current"; //$NON-NLS-1$
+	
+	public static final String KEY_BRANCH_DETACHED = "Detached"; //$NON-NLS-1$
 
 	public static final String KEY_AUTHOR_NAME = "AuthorName"; //$NON-NLS-1$
 
@@ -204,6 +216,8 @@ public class GitConstants {
 	public static final String KEY_END_RANGE = "End"; //$NON-NLS-1$
 
 	public static final String KEY_INIT_PROJECT = "initProject"; //$NON-NLS-1$
+	
+	public static final String KEY_CLONE_SUBMODULES = "cloneSubmodules"; //$NON-NLS-1$
 
 	public static final String KEY_SSO_TOKEN = "SSOToken"; //$NON-NLS-1$
 
@@ -232,8 +246,8 @@ public class GitConstants {
 	public static final String KEY_REMOTENAME = "RemoteName"; //$NON-NLS-1$
 
 	public static final String KEY_LOCALNAME = "LocalName"; //$NON-NLS-1$
-
-	public static final String KEY_GITHUB_ACCESS_TOKEN = "GitHubAccessToken"; //$NON-NLS-1$
-
-	public static final String KEY_GITHUB_HOST = "github.com"; //$NON-NLS-1$
+	
+	public static final String KEY_SUBMODULE_STATUS = "SubmoduleStatus"; //$NON-NLS-1$
+	
+	public static final String KEY_PULL_REQUEST = "PullRequest"; //$NON-NLS-1$
 }

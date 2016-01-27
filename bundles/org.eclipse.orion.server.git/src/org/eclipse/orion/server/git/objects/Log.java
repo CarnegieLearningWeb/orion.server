@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2011, 2014 IBM Corporation and others.
+ * Copyright (c) 2011, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -290,7 +290,7 @@ public class Log extends GitObject {
 
 	static Map<ObjectId, JSONArray> getCommitToBranchMap(URI cloneLocation, Repository db) throws GitAPIException, JSONException {
 		HashMap<ObjectId, JSONArray> commitToBranch = new HashMap<ObjectId, JSONArray>();
-		Git git = new Git(db);
+		Git git = Git.wrap(db);
 		List<Ref> branchRefs = git.branchList().setListMode(ListMode.ALL).call();
 		for (Ref branchRef : branchRefs) {
 			ObjectId commitId = branchRef.getLeaf().getObjectId();

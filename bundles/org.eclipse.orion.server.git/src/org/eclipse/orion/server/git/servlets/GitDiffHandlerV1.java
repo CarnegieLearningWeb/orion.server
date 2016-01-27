@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2011, 2014 IBM Corporation and others.
+ * Copyright (c) 2011, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -231,7 +231,7 @@ public class GitDiffHandlerV1 extends AbstractGitHandler {
 			try {
 				p.reset(reader, head);
 			} finally {
-				reader.release();
+				reader.close();
 			}
 			oldTree = p;
 			newTree = new DirCacheIterator(db.readDirCache());
@@ -321,7 +321,7 @@ public class GitDiffHandlerV1 extends AbstractGitHandler {
 	private boolean applyPatch(HttpServletRequest request, HttpServletResponse response, Repository db, String contentType) throws ServletException {
 		try {
 			String patch = readPatch(request.getInputStream(), contentType);
-			Git git = new Git(db);
+			Git git = Git.wrap(db);
 			ApplyCommand applyCommand = git.apply();
 			applyCommand.setPatch(IOUtilities.toInputStream(patch));
 			// TODO: ignore all errors for now, see bug 366008
@@ -436,7 +436,7 @@ public class GitDiffHandlerV1 extends AbstractGitHandler {
 			p.reset(or, new RevWalk(db).parseTree(id));
 			return p;
 		} finally {
-			or.release();
+			or.close();
 		}
 	}
 }

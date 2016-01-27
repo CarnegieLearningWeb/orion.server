@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2010, 2012 IBM Corporation and others.
+ * Copyright (c) 2010, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -147,10 +147,6 @@ public class IOUtilities {
 				} else if (line.equals("--" + boundary + "--")) { //$NON-NLS-1$ //$NON-NLS-2$
 					parts.put(name, buf.toString());
 				} else {
-					
-					if ("uploadedfile".equals(name) && "".equals(line)) //$NON-NLS-1$ //$NON-NLS-2$
-						continue; // skip empty lines 
-					
 					if (buf.length() > 0)
 						buf.append(prev);
 					buf.append(line);

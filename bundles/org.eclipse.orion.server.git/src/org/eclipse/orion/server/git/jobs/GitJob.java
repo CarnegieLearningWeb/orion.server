@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2011, 2014 IBM Corporation and others.
+ * Copyright (c) 2011, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -57,7 +57,7 @@ public abstract class GitJob extends TaskJob {
 	protected GitCredentialsProvider credentials;
 	protected Cookie cookie;
 
-	private static JSchException getJSchException(Throwable e) {
+	protected static JSchException getJSchException(Throwable e) {
 		if (e instanceof JSchException) {
 			return (JSchException) e;
 		}
@@ -166,7 +166,7 @@ public abstract class GitJob extends TaskJob {
 	 * @return <code>true</code> if the messages match, and <code>false</code> otherwise
 	 * @see MessageFormat
 	 */
-	private static boolean matchMessage(String pattern, String message) {
+	protected static boolean matchMessage(String pattern, String message) {
 		if (message == null) {
 			return false;
 		}

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2011, 2014 IBM Corporation and others
+ * Copyright (c) 2011, 2016 IBM Corporation and others
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -46,14 +46,29 @@ public class AuthorizedUserFilter implements Filter {
 	private IAuthenticationService authenticationService;
 
 	public void init(FilterConfig filterConfig) throws ServletException {
-		authenticationService = Activator.getDefault().getAuthService();
-		// treat lack of authentication as an error. Administrator should use
-		// "None" to disable authentication entirely
-		if (authenticationService == null) {
-			String msg = "Authentication service is missing. The server configuration must specify an authentication scheme, or use \"None\" to indicate no authentication"; //$NON-NLS-1$
-			LogHelper.log(new Status(IStatus.ERROR, Activator.PI_SERVER_SERVLETS, msg, null));
-			throw new ServletException(msg);
+		while (Activator.getDefault() == null) {
+			// the singleton for the activator will return null if the bundle
+			// is not yet active. We can wait for it in this filter.
+			String msg = "Authentication service is not active. AuthorizedUserFilter is waiting."; //$NON-NLS-1$
+			LogHelper.log(new Status(IStatus.WARNING, Activator.PI_SERVER_SERVLETS, msg, null));
+			try {
+				Thread.sleep(500);
+			} catch (InterruptedException e) {
+				break;
+			}
 		}
+		while (Activator.getDefault().getAuthService() == null) {
+			// the authentication service will be null if the bundle
+			// is not yet active. We can wait for it in this filter.
+			String msg = "Authentication service is not active. AuthorizedUserFilter is waiting. The server configuration must specify an authentication scheme, or use \"None\" to indicate no authentication"; //$NON-NLS-1$
+			LogHelper.log(new Status(IStatus.WARNING, Activator.PI_SERVER_SERVLETS, msg, null));
+			try {
+				Thread.sleep(500);
+			} catch (InterruptedException e) {
+				break;
+			}
+		}
+		authenticationService = Activator.getDefault().getAuthService();
 	}
 
 	public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {

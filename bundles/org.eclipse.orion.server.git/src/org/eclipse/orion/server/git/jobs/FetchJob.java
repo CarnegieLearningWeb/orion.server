@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2011, 2013 IBM Corporation and others.
+ * Copyright (c) 2011, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,6 +12,7 @@ package org.eclipse.orion.server.git.jobs;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -29,6 +30,7 @@ import org.eclipse.jgit.api.TransportConfigCallback;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.api.errors.InvalidRemoteException;
 import org.eclipse.jgit.api.errors.JGitInternalException;
+import org.eclipse.jgit.internal.JGitText;
 import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.ProgressMonitor;
 import org.eclipse.jgit.lib.RefUpdate.Result;
@@ -41,15 +43,19 @@ import org.eclipse.jgit.transport.RemoteConfig;
 import org.eclipse.jgit.transport.TrackingRefUpdate;
 import org.eclipse.jgit.transport.Transport;
 import org.eclipse.jgit.transport.TransportHttp;
+import org.eclipse.orion.server.core.ServerStatus;
 import org.eclipse.orion.server.git.GitActivator;
 import org.eclipse.orion.server.git.GitConstants;
 import org.eclipse.orion.server.git.GitCredentialsProvider;
+import org.eclipse.orion.server.git.IGitHubTokenProvider;
 import org.eclipse.orion.server.git.servlets.GitUtils;
 import org.eclipse.osgi.util.NLS;
+import org.json.JSONObject;
 
 /**
  * A job to perform a fetch operation in the background
  */
+@SuppressWarnings("restriction")
 public class FetchJob extends GitJob {
 
 	private IPath path;
@@ -93,7 +99,7 @@ public class FetchJob extends GitJob {
 		Repository db = null;
 		try {
 			db = getRepository();
-			Git git = new Git(db);
+			Git git = Git.wrap(db);
 			FetchCommand fc = git.fetch();
 			fc.setProgressMonitor(gitMonitor);
 
@@ -186,6 +192,34 @@ public class FetchJob extends GitJob {
 			result = new Status(IStatus.ERROR, GitActivator.PI_GIT, "Error fetching git remote", e);
 		} catch (GitAPIException e) {
 			result = getGitAPIExceptionStatus(e, "Error fetching git remote");
+
+			if (matchMessage(JGitText.get().notAuthorized, e.getCause().getMessage())) {
+				// HTTP connection problems are distinguished by exception message
+				Repository db = null;
+				try {
+					db = getRepository();
+					Git git = Git.wrap(db);
+					RemoteConfig remoteConfig = new RemoteConfig(git.getRepository().getConfig(), remote);
+					String repositoryUrl = remoteConfig.getURIs().get(0).toString();
+
+					Enumeration<IGitHubTokenProvider> providers = GitCredentialsProvider.GetGitHubTokenProviders();
+					while (providers.hasMoreElements()) {
+						String authUrl = providers.nextElement().getAuthUrl(repositoryUrl, cookie);
+						if (authUrl != null) {
+							ServerStatus status = ServerStatus.convert(result);
+							JSONObject data = status.getJsonData();
+							data.put("GitHubAuth", authUrl); //$NON-NLS-1$
+							break;
+						}
+					}
+				} catch (Exception ex) {
+					/* fail silently, no GitHub auth url will be returned */
+				} finally {
+					if (db != null) {
+						db.close();
+					}
+				}
+			}
 		} catch (JGitInternalException e) {
 			result = getJGitInternalExceptionStatus(e, "Error fetching git remote");
 		} catch (Exception e) {

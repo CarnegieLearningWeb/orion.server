@@ -109,19 +109,7 @@ public class GitFileDecorator implements IWebResourceDecorator {
 					addGitLinks(request, resource, representation, cloneLocation, db, defaultRemoteBranch, branch);
 
 					JSONArray children = representation.optJSONArray(ProtocolConstants.KEY_CHILDREN);
-					if (children != null) {
-						for (int i = 0; i < children.length(); i++) {
-							JSONObject child = children.getJSONObject(i);
-							String location = child.getString(ProtocolConstants.KEY_LOCATION);
-							if (db != null) {
-								// if parent was a git repository we can reuse information computed above
-								addGitLinks(request, new URI(location), child, cloneLocation, db, defaultRemoteBranch, branch);
-							} else {
-								// maybe the child is the root of a git repository
-								addGitLinks(request, new URI(location), child);
-							}
-						}
-					}
+					calcGitLinks(children, representation, cloneLocation, db, defaultRemoteBranch, branch, request);
 				} finally {
 					if (db != null) {
 						db.close();
@@ -131,6 +119,28 @@ public class GitFileDecorator implements IWebResourceDecorator {
 		} catch (Exception e) {
 			// log and continue
 			LogHelper.log(e);
+		}
+	}
+
+	private void calcGitLinks(JSONArray children, JSONObject representation, URI cloneLocation, Repository db, RemoteBranch defaultRemoteBranch, String branch,
+			HttpServletRequest request) throws JSONException, URISyntaxException, CoreException, IOException {
+
+		if (children != null) {
+			for (int i = 0; i < children.length(); i++) {
+				JSONObject child = children.getJSONObject(i);
+				String location = child.getString(ProtocolConstants.KEY_LOCATION);
+				if (db != null) {
+					// if parent was a git repository we can reuse information computed above\
+					addGitLinks(request, new URI(location), child, cloneLocation, db, defaultRemoteBranch, branch);
+					JSONArray childItems = child.optJSONArray(ProtocolConstants.KEY_CHILDREN);
+					if (childItems != null) {
+						calcGitLinks(childItems, representation, cloneLocation, db, defaultRemoteBranch, branch, request);
+					}
+				} else {
+					// maybe the child is the root of a git repository
+					addGitLinks(request, new URI(location), child);
+				}
+			}
 		}
 	}
 
@@ -187,9 +197,11 @@ public class GitFileDecorator implements IWebResourceDecorator {
 		gitSection.put(GitConstants.KEY_HEAD, link);
 
 		// add Git Commit URI
-		path = new Path(GitServlet.GIT_URI + '/' + Commit.RESOURCE).append(GitUtils.encode(branchName)).append(targetPath);
-		link = new URI(location.getScheme(), location.getAuthority(), path.toString(), null, null);
-		gitSection.put(GitConstants.KEY_COMMIT, link);
+		if (branchName != null) {
+			path = new Path(GitServlet.GIT_URI + '/' + Commit.RESOURCE).append(GitUtils.encode(branchName)).append(targetPath);
+			link = new URI(location.getScheme(), location.getAuthority(), path.toString(), null, null);
+			gitSection.put(GitConstants.KEY_COMMIT, link);
+		}
 
 		// add Git Remote URI
 		path = new Path(GitServlet.GIT_URI + '/' + Remote.RESOURCE).append(targetPath);
@@ -202,7 +214,9 @@ public class GitFileDecorator implements IWebResourceDecorator {
 		gitSection.put(GitConstants.KEY_CONFIG, link);
 
 		// add Git Default Remote Branch URI
-		gitSection.put(GitConstants.KEY_DEFAULT_REMOTE_BRANCH, defaultRemoteBranch.getLocation());
+		if (branchName != null) {
+			gitSection.put(GitConstants.KEY_DEFAULT_REMOTE_BRANCH, defaultRemoteBranch.getLocation());
+		}
 
 		// add Git Tag URI
 		path = new Path(GitServlet.GIT_URI + '/' + Tag.RESOURCE).append(targetPath);
@@ -272,7 +286,7 @@ public class GitFileDecorator implements IWebResourceDecorator {
 					repo = FileRepositoryBuilder.create(gitDir);
 					repo.create();
 					// we need to perform an initial commit to workaround JGit bug 339610.
-					Git git = new Git(repo);
+					Git git = Git.wrap(repo);
 					git.add().addFilepattern(".").call(); //$NON-NLS-1$
 					git.commit().setMessage("Initial commit").call();
 				} finally {

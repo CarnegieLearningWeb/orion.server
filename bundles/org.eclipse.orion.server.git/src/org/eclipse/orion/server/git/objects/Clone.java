@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2011, 2014 IBM Corporation and others.
+ * Copyright (c) 2011, 2015 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -20,13 +20,15 @@ import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
+import org.eclipse.jgit.api.SubmoduleStatusCommand;
+import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.errors.ConfigInvalidException;
 import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.Repository;
-import org.eclipse.jgit.lib.RepositoryCache;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
+import org.eclipse.jgit.submodule.SubmoduleStatus;
 import org.eclipse.jgit.submodule.SubmoduleWalk;
 import org.eclipse.jgit.transport.URIish;
-import org.eclipse.jgit.util.FS;
 import org.eclipse.orion.internal.server.servlets.Activator;
 import org.eclipse.orion.internal.server.servlets.file.NewFileServlet;
 import org.eclipse.orion.server.core.ProtocolConstants;
@@ -51,7 +53,7 @@ public class Clone {
 
 	public static final String RESOURCE = "clone"; //$NON-NLS-1$
 	public static final String TYPE = "Clone"; //$NON-NLS-1$
-
+	
 	private String id;
 	private URI contentLocation;
 	private URIish uriish;
@@ -75,11 +77,13 @@ public class Clone {
 				new Property(GitConstants.KEY_TAG), //
 				new Property(GitConstants.KEY_INDEX), //
 				new Property(GitConstants.KEY_STASH), //
+				new Property(GitConstants.KEY_PULL_REQUEST_LOCATION), //
 				new Property(GitConstants.KEY_STATUS), //
 				new Property(GitConstants.KEY_DIFF), //
 				new Property(GitConstants.KEY_URL), //
 				new Property(ProtocolConstants.KEY_CHILDREN),//
-				new Property(ProtocolConstants.KEY_PARENTS)};
+				new Property(ProtocolConstants.KEY_PARENTS),//
+				new Property(GitConstants.KEY_SUBMODULE)};
 		DEFAULT_RESOURCE_SHAPE.setProperties(defaultProperties);
 	}
 	protected Serializer<JSONObject> jsonSerializer = new JSONSerializer();
@@ -188,6 +192,13 @@ public class Clone {
 		IPath np = new Path(GitServlet.GIT_URI).append(Commit.RESOURCE).append(Constants.HEAD).append(getId());
 		return createUriWithPath(np);
 	}
+	
+	// TODO: expandable?
+	@PropertyDescription(name = GitConstants.KEY_SUBMODULE)
+	private URI getSubmoduleLocation() throws URISyntaxException {
+		IPath np = new Path(GitServlet.GIT_URI).append(Submodule.RESOURCE).append(getId());
+		return createUriWithPath(np);
+	}
 
 	// TODO: expandable?
 	@PropertyDescription(name = GitConstants.KEY_COMMIT)
@@ -195,7 +206,18 @@ public class Clone {
 		IPath np = new Path(GitServlet.GIT_URI).append(Commit.RESOURCE).append(getId());
 		return createUriWithPath(np);
 	}
-
+	
+	// TODO: expandable?
+	@PropertyDescription(name = GitConstants.KEY_PULL_REQUEST_LOCATION)
+	private URI getPullRequestLocation() throws URISyntaxException {
+		String url = this.cloneUrl;
+		if(url!=null && GitUtils.isInGithub(url)){
+			IPath np = new Path(GitServlet.GIT_URI).append(PullRequest.RESOURCE).append(getId());
+			return createUriWithPath(np);
+		}
+		return null;
+	}
+		
 	// TODO: expandable
 	@PropertyDescription(name = GitConstants.KEY_BRANCH)
 	private URI getBranchLocation() throws URISyntaxException {
@@ -239,41 +261,57 @@ public class Clone {
 	}
 
 	@PropertyDescription(name = ProtocolConstants.KEY_CHILDREN)
-	private JSONArray getChildren() throws URISyntaxException, IOException, CoreException, JSONException {
-		if (path == null) return new JSONArray();
+	private JSONArray getChildren() throws URISyntaxException, IOException, CoreException, JSONException, GitAPIException {
+		if (path == null)
+			return null;
 		IFileStore fileStore = NewFileServlet.getFileStore(null, path);
-        if (fileStore == null)
-            return new JSONArray();
-        File localFile = fileStore.toLocalFile(EFS.NONE, null);
+		if (fileStore == null)
+			return null;
+		File localFile = fileStore.toLocalFile(EFS.NONE, null);
 		File gitModule = new File(localFile, ".gitmodules");
 		JSONArray submodules = null;
-        if (gitModule.exists() && !gitModule.isDirectory()) {
-        	submodules = new JSONArray();
-            Repository parentRepository = null;
-            try {
-    			if (RepositoryCache.FileKey.isGitRepository(new File(localFile, Constants.DOT_GIT), FS.DETECTED)) {
-    				localFile = new File(localFile, Constants.DOT_GIT);
-    			}
-    			parentRepository = FileRepositoryBuilder.create(localFile);
-    			SubmoduleWalk walk = SubmoduleWalk.forIndex(parentRepository);
-    			while (walk.next()) {
-                    File submoduleFile = walk.getRepository().getWorkTree();
-                    JSONArray newParents = (this.parents == null? new JSONArray(): new JSONArray(this.parents.toString()));
-                    newParents.put(new Path(getId()));
-                    JSONObject submoduleCloneJSON = new Clone().toJSON(path.append(walk.getPath()).addTrailingSeparator(), baseLocation, GitUtils.getCloneUrl(submoduleFile),newParents);
-                    submodules.put(submoduleCloneJSON);
-                }
-                walk.release();
-            } catch (IOException e) {
-    			// ignore and skip Git URL
-    		} finally {
-    			if (parentRepository != null) {
-    				parentRepository.close();
-    			}
-    		}
-            
-        }
-        return submodules;
+		if (gitModule.exists() && !gitModule.isDirectory()) {
+			submodules = new JSONArray();
+			Repository parentRepository = null;
+			try {
+				parentRepository = FileRepositoryBuilder.create(GitUtils.resolveGitDir(localFile));
+				SubmoduleWalk walk = SubmoduleWalk.forIndex(parentRepository);
+				while (walk.next()) {
+					String cloneUrl;
+					if (walk.getRepository() != null) {
+						cloneUrl = GitUtils.getCloneUrl(walk.getRepository());
+					} else {
+						cloneUrl = walk.getRemoteUrl();
+					}
+					JSONArray newParents = (this.parents == null ? new JSONArray() : new JSONArray(this.parents.toString()));
+					newParents.put(getLocation().getPath());
+					JSONObject submoduleCloneJSON = new Clone().toJSON(path.append(walk.getPath()).addTrailingSeparator(), baseLocation, cloneUrl, newParents);
+					
+					SubmoduleStatus ss = new SubmoduleStatusCommand(parentRepository).addPath(walk.getModulesPath()).call().values().iterator().next();
+					if(ss != null){
+						JSONObject submoduleStatus = new JSONObject();
+						submoduleStatus.put(ProtocolConstants.KEY_TYPE, ss.getType().toString());
+						submoduleStatus.put(ProtocolConstants.KEY_PATH, ss.getPath());
+						if(ss.getHeadId()!=null){
+							submoduleStatus.put(GitConstants.KEY_HEAD_SHA, ss.getHeadId().getName());
+						}
+						submoduleCloneJSON.put(GitConstants.KEY_SUBMODULE_STATUS, submoduleStatus);
+					}	
+					submodules.put(submoduleCloneJSON);
+				}
+				walk.close();
+				submodules = submodules.length() > 0 ? submodules : null;
+			} catch (ConfigInvalidException e) {
+			} catch (IOException e) {
+				// ignore and skip Git URL
+			} finally {
+				if (parentRepository != null) {
+					parentRepository.close();
+				}
+			}
+
+		}
+		return submodules;
 	}
 	
 	@PropertyDescription(name = ProtocolConstants.KEY_PARENTS)
