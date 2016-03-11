@@ -24,8 +24,6 @@ import org.eclipse.orion.server.core.metastore.UserInfo;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Handles access and persistence of user authorization information.
@@ -50,13 +48,11 @@ public class AuthorizationService {
 		try {
 			//TODO probably want caller to pass in UserInfo for performance
 			UserInfo user = OrionConfiguration.getMetaStore().readUser(userId);
-			Logger logger = LoggerFactory.getLogger("org.eclipse.orion.server.account"); //$NON-NLS-1$
-			logger.info("user: "+user);
 			JSONArray userRightArray = AuthorizationReader.getAuthorizationData(user);
-			logger.info("userRightArray: "+userRightArray);
+
 			// adds all rights for the uri
 			JSONObject userRight = createUserRight(uri);
-			logger.info("userRight: "+userRight);
+
 			//check if we already have this right
 			for (int i = 0; i < userRightArray.length(); i++) {
 				if (userRight.toString().equals(userRightArray.get(i).toString()))
@@ -65,10 +61,8 @@ public class AuthorizationService {
 
 			//add the new right
 			userRightArray.put(userRight);
-			logger.info("userRight: "+userRight);
 
 			AuthorizationReader.saveRights(user, userRightArray);
-			logger.info("Success saving Rights!");
 		} catch (Exception e) {
 			String msg = "Error persisting user rights";
 			throw new CoreException(new ServerStatus(IStatus.ERROR, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, msg, e));
