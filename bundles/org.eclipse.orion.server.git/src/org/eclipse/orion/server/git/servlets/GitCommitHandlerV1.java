@@ -61,12 +61,12 @@ import org.eclipse.jgit.treewalk.filter.PathFilterGroup;
 import org.eclipse.jgit.treewalk.filter.TreeFilter;
 import org.eclipse.orion.internal.server.servlets.ServletResourceHandler;
 import org.eclipse.orion.internal.server.servlets.task.TaskJobHandler;
-import org.eclipse.orion.internal.server.servlets.useradmin.UserEmailUtil;
 import org.eclipse.orion.server.core.IOUtilities;
 import org.eclipse.orion.server.core.LogHelper;
 import org.eclipse.orion.server.core.OrionConfiguration;
 import org.eclipse.orion.server.core.ProtocolConstants;
 import org.eclipse.orion.server.core.ServerStatus;
+import org.eclipse.orion.server.core.UserEmailUtil;
 import org.eclipse.orion.server.core.metastore.UserInfo;
 import org.eclipse.orion.server.core.users.UserConstants;
 import org.eclipse.orion.server.git.AdditionalRebaseStatus;
@@ -603,8 +603,10 @@ public class GitCommitHandlerV1 extends AbstractGitHandler {
 		try {
 			boolean isRoot = "".equals(filePath); //$NON-NLS-1$
 			String tagName = toPut.getString(ProtocolConstants.KEY_NAME);
+			boolean isTagAnnotated = toPut.has(GitConstants.KEY_ANNOTATED_TAG) ? toPut.getBoolean(GitConstants.KEY_ANNOTATED_TAG) : true;//true by default
+			String annotatedTagMessage = toPut.optString(GitConstants.KEY_ANNOTATED_TAG_MESSAGE);
 			if (tagName != null) {
-				return tag(request, response, db, gitSegment, tagName, isRoot);
+				return tag(request, response, db, gitSegment, tagName, isRoot, isTagAnnotated, annotatedTagMessage);
 			}
 			return false;
 		} catch (Exception e) {
@@ -613,7 +615,8 @@ public class GitCommitHandlerV1 extends AbstractGitHandler {
 		}
 	}
 
-	private boolean tag(HttpServletRequest request, HttpServletResponse response, Repository db, String commitId, String tagName, boolean isRoot)
+	private boolean tag(HttpServletRequest request, HttpServletResponse response, Repository db, String commitId,
+		String tagName, boolean isRoot, boolean isTagAnnotated, String annotatedTagMessage)
 			throws JSONException, URISyntaxException, ServletException {
 		Git git = Git.wrap(db);
 		RevWalk walk = new RevWalk(db);
@@ -622,7 +625,7 @@ public class GitCommitHandlerV1 extends AbstractGitHandler {
 			RevCommit revCommit = walk.lookupCommit(objectId);
 			walk.parseBody(revCommit);
 
-			GitTagHandlerV1.tag(git, revCommit, tagName);
+			GitTagHandlerV1.tag(git, revCommit, tagName, isTagAnnotated, annotatedTagMessage);
 
 			URI cloneLocation = BaseToCloneConverter.getCloneLocation(getURI(request), BaseToCloneConverter.COMMIT_REFRANGE);
 			Commit commit = new Commit(cloneLocation, db, revCommit, null);

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2009, 2015 IBM Corporation and others 
+ * Copyright (c) 2009, 2016 IBM Corporation and others 
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -13,9 +13,7 @@ package org.eclipse.orion.internal.server.core;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
@@ -25,16 +23,15 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.preferences.IPreferencesService;
-import org.eclipse.orion.internal.server.core.diskusage.DiskUsageJob;
 import org.eclipse.orion.internal.server.core.metastore.SimpleMetaStore;
 import org.eclipse.orion.internal.server.core.tasks.TaskService;
+import org.eclipse.orion.internal.server.core.workspacepruner.WorkspacePrunerJob;
 import org.eclipse.orion.server.core.LogHelper;
 import org.eclipse.orion.server.core.OrionConfiguration;
 import org.eclipse.orion.server.core.PreferenceHelper;
 import org.eclipse.orion.server.core.ServerConstants;
 import org.eclipse.orion.server.core.metastore.IMetaStore;
 import org.eclipse.orion.server.core.tasks.ITaskService;
-import org.eclipse.orion.server.core.users.UserConstants;
 import org.eclipse.osgi.service.datalocation.Location;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleActivator;
@@ -61,11 +58,13 @@ public class Activator implements BundleActivator {
 	private ITaskService taskService;
 	private IMetaStore metastore;
 	private URI rootStoreURI;
-	private DiskUsageJob diskUsageJob;
+	private WorkspacePrunerJob workspacePrunerJob;
 
 	private static final Logger logger = LoggerFactory.getLogger(LogHelper.LOGGER_ID);
 
 	private ServiceTracker<Location, Location> instanceLocationTracker;
+	
+	public static final String PI_SERVER_CORE = "org.eclipse.orion.server.core"; //$NON-NLS-1$
 
 	public static Activator getDefault() {
 		return singleton;
@@ -146,11 +145,6 @@ public class Activator implements BundleActivator {
 	private void initializeMetaStore() {
 		try {
 			metastore = new SimpleMetaStore(OrionConfiguration.getRootLocation().toLocalFile(EFS.NONE, null));
-			List<String> keys = new ArrayList<String>();
-			keys.add(UserConstants.USER_NAME);
-			metastore.registerUserProperties(keys);
-			// reading all users will automatically add all user names to the username cache
-			metastore.readAllUsers();
 		} catch (CoreException e) {
 			String msg = "Cannot initialize MetaStore";
 			logger.error(msg, e);
@@ -166,15 +160,16 @@ public class Activator implements BundleActivator {
 		registerServices();
 		initializeFileSystem();
 		initializeMetaStore();
-		startDiskUsageJob();
+		startWorkspacePrunerJob();
+		logger.info("Started Orion server core successfully."); //$NON-NLS-1$
 	}
 
-	private void startDiskUsageJob() {
-		String diskUsageEnabled = PreferenceHelper.getString(ServerConstants.CONFIG_DISK_USAGE_ENABLED, "false").toLowerCase(); //$NON-NLS-1$
-		if ("true".equals(diskUsageEnabled)) {
-			diskUsageJob = new DiskUsageJob();
-			// Collect the disk usage data in ten seconds.
-			diskUsageJob.schedule(10000);
+	private void startWorkspacePrunerJob() {
+		String workspacePruningEnabled = PreferenceHelper.getString(ServerConstants.CONFIG_WORKSPACEPRUNER_ENABLED, "false").toLowerCase(); //$NON-NLS-1$
+		if ("true".equals(workspacePruningEnabled)) { //$NON-NLS-1$
+			workspacePrunerJob = new WorkspacePrunerJob();
+			/* start the pruning job in one minute */
+			workspacePrunerJob.schedule(60000);
 		}
 	}
 

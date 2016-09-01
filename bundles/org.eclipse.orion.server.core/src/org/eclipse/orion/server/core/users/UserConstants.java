@@ -23,6 +23,11 @@ public class UserConstants {
 	public static final String BLOCKED = "Blocked"; //$NON-NLS-1$
 
 	/**
+	 * JSON representation key for a user's account creation timestamp. The value's data type is a String.
+	 */
+	public static final String CREATION_TIMESTAMP = "AccountCreationTimestamp";
+
+	/**
 	 * JSON representation key for a user's disk usage. The value's data type is a String.
 	 */
 	public static final String DISK_USAGE = "DiskUsage"; //$NON-NLS-1$
@@ -106,10 +111,13 @@ public class UserConstants {
 	 * JSON representation key for a user's name, the login or short account name. The value's data type is a String.
 	 */
 	public static final String USER_NAME = "UserName"; //$NON-NLS-1$
-	
+
 	/**
-	 * Added by Jon
-	 * JSON representation key for a user's home wiki. The value's data type is a String.
+	 * JSON representation key for when a warning e-mail was sent to a user regarding the intention
+	 * to delete their workspaces due to inactivity. The value's data type is a String.
 	 */
-	public static final String HOME_WIKI = "HomeWiki"; //$NON-NLS-1$
+	public static final String WORKSPACEPRUNER_STARTDATE = "PrunerStartTimestamp"; //$NON-NLS-1$
+	public static final String WORKSPACEPRUNER_REMINDERSENT = "PrunerReminderSent"; //$NON-NLS-1$
+	public static final String WORKSPACEPRUNER_FINALWARNINGSENT = "PrunerFinalWarningSent"; //$NON-NLS-1$
+	public static final String WORKSPACEPRUNER_ENDDATE = "PrunerEndTimestamp"; //$NON-NLS-1$
 }

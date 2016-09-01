@@ -2,7 +2,7 @@
 <feature
       id="org.eclipse.orion.server.feature"
       label="%featureName"
-      version="12.0.0.qualifier"
+      version="13.0.0.qualifier"
       provider-name="%providerName"
       plugin="org.eclipse.orion.server.core"
       license-feature="org.eclipse.license"
@@ -203,13 +203,6 @@
 
    <plugin
          id="org.eclipse.orion.server.cf"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"
-         unpack="false"/>
-
-   <plugin
-         id="org.eclipse.orion.server.events"
          download-size="0"
          install-size="0"
          version="0.0.0"

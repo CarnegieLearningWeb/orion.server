@@ -28,6 +28,7 @@ import org.eclipse.orion.server.core.OrionConfiguration;
 import org.eclipse.orion.server.core.ProtocolConstants;
 import org.eclipse.orion.server.core.ServerConstants;
 import org.eclipse.orion.server.core.ServerStatus;
+import org.eclipse.orion.server.core.UserEmailUtil;
 import org.eclipse.orion.server.core.metastore.UserInfo;
 import org.eclipse.orion.server.core.users.UserConstants;
 import org.eclipse.orion.server.servlets.OrionServlet;
@@ -86,7 +87,7 @@ public class EmailConfirmationServlet extends OrionServlet {
 		userInfo.setProperty(UserConstants.PASSWORD_RESET_ID, null);
 
 		try {
-			UserEmailUtil.getUtil().setPasswordResetEmail(userInfo);
+			UserEmailUtil.getUtil().sendPasswordResetEmail(userInfo);
 		} catch (Exception e) {
 			LogHelper.log(e);
 			resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,

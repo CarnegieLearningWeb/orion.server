@@ -84,8 +84,8 @@ echo "Working in `pwd`"
 
 # Download and prepare Eclipse SDK, which is needed to process the update site
 echo "Downloading eclipse to $PWD"
-cp /home/data/httpd/download.eclipse.org/eclipse/downloads/drops4/R-4.4.2-201502041700/eclipse-SDK-4.4.2-linux-gtk-x86_64.tar.gz .
-tar -xzf eclipse-SDK-4.4.2-linux-gtk-x86_64.tar.gz
+cp /home/data/httpd/download.eclipse.org/eclipse/downloads/drops4/R-4.5.2-201602121500/eclipse-SDK-4.5.2-linux-gtk-x86_64.tar.gz .
+tar -xzf eclipse-SDK-4.5.2-linux-gtk-x86_64.tar.gz
 cd eclipse
 chmod 700 eclipse
 cd ..
@@ -98,7 +98,7 @@ echo "Installing WTP Releng tools"
 ./eclipse/eclipse -nosplash --launcher.suppressErrors -clean -debug -application org.eclipse.equinox.p2.director -repository http://download.eclipse.org/webtools/releng/repository/ -installIUs org.eclipse.wtp.releng.tools.feature.feature.group
 # Clean up
 echo "Cleaning up"
-rm eclipse-SDK-4.4.2-linux-gtk-x86_64.tar.gz
+rm eclipse-SDK-4.5.2-linux-gtk-x86_64.tar.gz
 
 # Generate drop files
 qualifiedVersion=$(egrep Build ${WORKSPACE}/bundles/org.eclipse.orion.server.core/about.properties | awk -F'[: \\\\]' '{print $4}')
@@ -251,16 +251,20 @@ echo "Update the composite update site"
 ./eclipse/eclipse -nosplash --launcher.suppressErrors -clean -debug -application org.eclipse.ant.core.antRunner -buildfile p2.composite.repository.xml default
 
 # deploy the successful build
-if [ "${ServerTestFailure}" -eq 0 ]; then
-	if [[ "${JOB_NAME}" == *-dev ]]; then
-		echo "Deploying successful build to orion.eclipse.org."
-		echo "ssh ahunter@build.eclipse.org ./deploy.sh -archive ${remoteDropDir}/eclipse-orion-${version}-linux.gtk.x86_64.zip"
-		ssh ahunter@build.eclipse.org ./deploy.sh -archive ${remoteDropDir}/eclipse-orion-${version}-linux.gtk.x86_64.zip
+if [ "${SKIP_DEPLOY}" != "true" ]; then
+	if [ "${ServerTestFailure}" -eq 0 ]; then
+		if [[ "${JOB_NAME}" == *-dev ]]; then
+			echo "Deploying successful build to orion.eclipse.org."
+			echo "ssh ahunter@build.eclipse.org ./deploy.sh -archive ${remoteDropDir}/eclipse-orion-${version}-linux.gtk.x86_64.zip"
+			ssh ahunter@build.eclipse.org ./deploy.sh -archive ${remoteDropDir}/eclipse-orion-${version}-linux.gtk.x86_64.zip
+		else
+			echo "Not deploying this successful build."
+		fi
 	else
-		echo "Not deploying this successful build."
+		echo "Not deploying this build, tests failed."
 	fi
 else
-	echo "Not deploying this build, tests failed."
+		echo "Not deploying this build, deploy is disabled."
 fi
 
 # Clean up

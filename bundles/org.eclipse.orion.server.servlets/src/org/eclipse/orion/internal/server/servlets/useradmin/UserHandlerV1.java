@@ -36,6 +36,7 @@ import org.eclipse.orion.server.core.OrionConfiguration;
 import org.eclipse.orion.server.core.PreferenceHelper;
 import org.eclipse.orion.server.core.ServerConstants;
 import org.eclipse.orion.server.core.ServerStatus;
+import org.eclipse.orion.server.core.UserEmailUtil;
 import org.eclipse.orion.server.core.metastore.IMetaStore;
 import org.eclipse.orion.server.core.metastore.ProjectInfo;
 import org.eclipse.orion.server.core.metastore.UserInfo;
@@ -108,9 +109,6 @@ public class UserHandlerV1 extends ServletResourceHandler<String> {
 		JSONObject json = new JSONObject();
 		json.put(UserConstants.USER_NAME, userInfo.getUserName());
 		json.put(UserConstants.FULL_NAME, userInfo.getFullName());
-		//Added by Jon
-		json.put(UserConstants.HOME_WIKI, userInfo.getHomeWiki());
-		
 		json.put(UserConstants.LOCATION, contextPath + location.getPath());
 		String email = userInfo.getProperty(UserConstants.EMAIL);
 		json.put(UserConstants.EMAIL, email);
@@ -203,9 +201,6 @@ public class UserHandlerV1 extends ServletResourceHandler<String> {
 			throws ServletException, IOException, JSONException, CoreException {
 		String username = json.has(UserConstants.USER_NAME) ? json.getString(UserConstants.USER_NAME) : null;
 		String fullname = json.has(UserConstants.FULL_NAME) ? json.getString(UserConstants.FULL_NAME) : null;
-		//Added by Jon
-		String homewiki = json.has(UserConstants.HOME_WIKI) ? json.getString(UserConstants.HOME_WIKI) : null;
-		
 		String email = json.has(UserConstants.EMAIL) ? json.getString(UserConstants.EMAIL) : null;
 		String password = json.has(UserConstants.PASSWORD) ? json.getString(UserConstants.PASSWORD) : null;
 		String identifier = json.has("identifier") ? json.getString("identifier") : null;
@@ -265,9 +260,6 @@ public class UserHandlerV1 extends ServletResourceHandler<String> {
 		userInfo = new UserInfo();
 		userInfo.setUserName(username);
 		userInfo.setFullName(fullname);
-		//Added by Jon
-		userInfo.setHomeWiki(homewiki);
-
 		userInfo.setProperty(UserConstants.PASSWORD, password);
 		if (identifier != null) {
 			userInfo.setProperty(UserConstants.OAUTH, identifier);
@@ -289,7 +281,6 @@ public class UserHandlerV1 extends ServletResourceHandler<String> {
 		}
 
 		Logger logger = LoggerFactory.getLogger("org.eclipse.orion.server.account"); //$NON-NLS-1$
-		logger.info("Home wiki default? "+homewiki);
 		if (logger.isInfoEnabled()) {
 			logger.info("Account created: " + username); //$NON-NLS-1$
 		}
@@ -297,7 +288,6 @@ public class UserHandlerV1 extends ServletResourceHandler<String> {
 		try {
 			// give the user access to their own user profile
 			String location = UserConstants.LOCATION_USERS_SERVLET + '/' + userInfo.getUniqueId();
-			logger.info("Adding Rights to "+ location);
 			AuthorizationService.addUserRight(userInfo.getUniqueId(), location);
 		} catch (CoreException e) {
 			return statusHandler.handleRequest(req, resp,
@@ -436,10 +426,6 @@ public class UserHandlerV1 extends ServletResourceHandler<String> {
 		}
 		if (data.has(UserConstants.FULL_NAME)) {
 			userInfo.setFullName(data.getString(UserConstants.FULL_NAME));
-		}
-		//Added by Jon
-		if (data.has(UserConstants.HOME_WIKI)) {
-			userInfo.setHomeWiki(data.getString(UserConstants.HOME_WIKI));
 		}
 		if (data.has(UserConstants.PASSWORD)) {
 			userInfo.setProperty(UserConstants.PASSWORD, data.getString(UserConstants.PASSWORD));
