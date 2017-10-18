@@ -1,5 +1,5 @@
 #!/bin/sh
-# Copyright (c) 2012, 2015 IBM Corporation and others.
+# Copyright (c) 2012, 2017 IBM Corporation and others.
 # All rights reserved.   This program and the accompanying materials
 # are made available under the terms of the Eclipse Public License v1.0
 # which accompanies this distribution, and is available at
@@ -84,8 +84,8 @@ echo "Working in `pwd`"
 
 # Download and prepare Eclipse SDK, which is needed to process the update site
 echo "Downloading eclipse to $PWD"
-cp /home/data/httpd/download.eclipse.org/eclipse/downloads/drops4/R-4.5.2-201602121500/eclipse-SDK-4.5.2-linux-gtk-x86_64.tar.gz .
-tar -xzf eclipse-SDK-4.5.2-linux-gtk-x86_64.tar.gz
+cp /home/data/httpd/download.eclipse.org/eclipse/downloads/drops4/R-4.6.3-201703010400/eclipse-SDK-4.6.3-linux-gtk-x86_64.tar.gz .
+tar -xzf eclipse-SDK-4.6.3-linux-gtk-x86_64.tar.gz
 cd eclipse
 chmod 700 eclipse
 cd ..
@@ -98,7 +98,7 @@ echo "Installing WTP Releng tools"
 ./eclipse/eclipse -nosplash --launcher.suppressErrors -clean -debug -application org.eclipse.equinox.p2.director -repository http://download.eclipse.org/webtools/releng/repository/ -installIUs org.eclipse.wtp.releng.tools.feature.feature.group
 # Clean up
 echo "Cleaning up"
-rm eclipse-SDK-4.5.2-linux-gtk-x86_64.tar.gz
+rm eclipse-SDK-4.6.3-linux-gtk-x86_64.tar.gz
 
 # Generate drop files
 qualifiedVersion=$(egrep Build ${WORKSPACE}/bundles/org.eclipse.orion.server.core/about.properties | awk -F'[: \\\\]' '{print $4}')
@@ -203,7 +203,9 @@ fi
 remoteDropDir=/home/data/httpd/download.eclipse.org/orion/drops/$dropDir
 echo "copy build ${dropDir} to ${remoteDropDir}"
 mkdir -p $remoteDropDir
+chmod g+w $remoteDropDir
 cp -R $localDropDir/* $remoteDropDir/
+chmod g+w $remoteDropDir/*
 
 # Ensure p2.mirrorURLs property is used in update site
 echo "Setting p2.mirrorsURL to http://www.eclipse.org/downloads/download.php?format=xml&file=/$remoteUpdateSiteBase"
@@ -255,8 +257,8 @@ if [ "${SKIP_DEPLOY}" != "true" ]; then
 	if [ "${ServerTestFailure}" -eq 0 ]; then
 		if [[ "${JOB_NAME}" == *-dev ]]; then
 			echo "Deploying successful build to orion.eclipse.org."
-			echo "ssh ahunter@build.eclipse.org ./deploy.sh -archive ${remoteDropDir}/eclipse-orion-${version}-linux.gtk.x86_64.zip"
-			ssh ahunter@build.eclipse.org ./deploy.sh -archive ${remoteDropDir}/eclipse-orion-${version}-linux.gtk.x86_64.zip
+			echo "ssh gheorghe@build.eclipse.org ./deploy.sh -archive ${remoteDropDir}/eclipse-orion-${version}-linux.gtk.x86_64.zip"
+			ssh gheorghe@build.eclipse.org ./deploy.sh -archive ${remoteDropDir}/eclipse-orion-${version}-linux.gtk.x86_64.zip
 		else
 			echo "Not deploying this successful build."
 		fi

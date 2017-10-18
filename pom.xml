@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-   Copyright (C) 2013, 2015 SAP AG and others.
+   Copyright (C) 2013, 2017 SAP AG and others.
 
    All rights reserved. This program and the accompanying materials
    are made available under the terms of the Eclipse Public License v1.0
@@ -64,7 +64,7 @@
 		<java-version>1.6</java-version>
 		<orion-repository>https://repo.eclipse.org/content/repositories/orion/</orion-repository>
 		<antrun-version>1.7</antrun-version>
-		<build-version>13.0.0-v${maven.build.timestamp}</build-version>
+		<build-version>17.0.0-v${maven.build.timestamp}</build-version>
 		<maven.build.timestamp.format>yyyyMMdd-HHmm</maven.build.timestamp.format>
 	</properties>
 
@@ -117,6 +117,9 @@
 			<modules>
 				<module>../org.eclipse.orion.client</module>
 			</modules>
+			<properties>
+				<target-platform>org.eclipse.orion.target</target-platform>
+			</properties>
 		</profile>
 		<profile>
 			<id>local-build-github</id>
@@ -269,7 +272,7 @@
 		<repository>
 			<id>eclipse-license</id>
 			<layout>p2</layout>
-			<url>http://download.eclipse.org/cbi/updates/license</url>
+			<url>http://mirror.csclub.uwaterloo.ca/eclipse/cbi/updates/license</url>
 		</repository>
 	</repositories>
 
@@ -511,7 +514,7 @@
 				<plugin>
 					<groupId>org.eclipse.cbi.maven.plugins</groupId>
 					<artifactId>eclipse-jarsigner-plugin</artifactId>
-					<version>1.1.0</version>
+					<version>1.1.3</version>
 				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
@@ -529,7 +532,7 @@
 				<plugin>
 					<groupId>org.codehaus.mojo</groupId>
 					<artifactId>findbugs-maven-plugin</artifactId>
-					<version>2.5.2</version>
+					<version>3.0.4</version>
 					<configuration>
 						<findbugsXmlOutput>true</findbugsXmlOutput>
 						<failOnError>false</failOnError>

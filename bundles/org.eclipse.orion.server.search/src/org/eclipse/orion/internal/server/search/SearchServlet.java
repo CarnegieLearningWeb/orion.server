@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014, 2015 IBM Corporation and others.
+ * Copyright (c) 2014, 2016 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -26,6 +26,7 @@ import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
+import org.eclipse.orion.internal.server.servlets.Activator;
 import org.eclipse.orion.server.core.OrionConfiguration;
 import org.eclipse.orion.server.core.metastore.ProjectInfo;
 import org.eclipse.orion.server.core.metastore.UserInfo;
@@ -46,7 +47,7 @@ import org.slf4j.LoggerFactory;
  */
 public class SearchServlet extends OrionServlet {
 
-	private static final String FIELD_NAMES = "Name,NameLower,Length,Directory,LastModified,Location,Path,RegEx,CaseSensitive,WholeWord"; //$NON-NLS-1$
+	private static final String FIELD_NAMES = "Name,NameLower,Length,Directory,LastModified,Location,Path,RegEx,CaseSensitive,WholeWord,Exclude"; //$NON-NLS-1$
 
 	private static final List<String> FIELD_LIST = Arrays.asList(FIELD_NAMES.split(",")); //$NON-NLS-1$
 
@@ -118,7 +119,21 @@ public class SearchServlet extends OrionServlet {
 						options.setIsSearchTermCaseSensitive(true);
 					} else if (term.startsWith("WholeWord:")) {
 						options.setIsSearchWholeWord(true);
+					} else if(term.startsWith("Exclude:")) {
+						String exclude = term.substring("Exclude:".length());
+						String[] items = exclude.split(",");
+						for(String item : items) {
+							try {
+								options.setExcluded(URLDecoder.decode(item, "UTF-8"));
+							}
+							catch(UnsupportedEncodingException usee) {
+								//ignore, bad term
+							}
+						}
 					}
+				} else if(term.indexOf(":") > -1) {
+					//unknown search term, ignore
+					continue;
 				} else {
 					//decode the term string now
 					try {
@@ -151,13 +166,16 @@ public class SearchServlet extends OrionServlet {
 		JSONObject resultsJSON = new JSONObject();
 		JSONObject responseJSON = new JSONObject();
 		try {
-			resultsJSON.put("numFound", files.size());
 			resultsJSON.put("start", 0);
-
 			JSONArray docs = new JSONArray();
-			for (SearchResult file : files) {
-				docs.put(file.toJSON(contextPath));
+			int found = 0;
+			if(files != null) {
+				found = files.size();
+				for (SearchResult file : files) {
+					docs.put(file.toJSON(contextPath));
+				}
 			}
+			resultsJSON.put("numFound", found);
 			resultsJSON.put("docs", docs);
 			// Add to parent JSON
 			JSONObject responseHeader = new JSONObject();
@@ -271,9 +289,13 @@ public class SearchServlet extends OrionServlet {
 	private boolean setScopeFromRequest(HttpServletRequest req, HttpServletResponse resp, SearchOptions options) {
 		try {
 			String pathInfo = options.getLocation();
-			// Remove the file servlet prefix
-			if (pathInfo != null) {
-				pathInfo = pathInfo.replaceFirst("/file", "");
+			if (pathInfo != null && (pathInfo.startsWith(Activator.LOCATION_FILE_SERVLET))) {
+				pathInfo = pathInfo.substring(Activator.LOCATION_FILE_SERVLET.length());
+			} else if (pathInfo != null && (pathInfo.startsWith(Activator.LOCATION_WORKSPACE_SERVLET))) {
+				pathInfo = pathInfo.substring(Activator.LOCATION_WORKSPACE_SERVLET.length());
+			}
+			if (pathInfo != null && pathInfo.endsWith("*")) {
+				pathInfo = pathInfo.substring(0, pathInfo.length() - 1);
 			}
 			IPath path = pathInfo == null ? Path.ROOT : new Path(pathInfo);
 			// prevent path canonicalization hacks

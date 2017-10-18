@@ -97,6 +97,7 @@ class FileHandlerV1 extends GenericFileHandler {
 	private void handleMultiPartGet(HttpServletRequest request, HttpServletResponse response, IFileStore file) throws IOException, CoreException,
 			NoSuchAlgorithmException, JSONException {
 		String boundary = createBoundaryString();
+		response.setHeader("Cache-Control", "no-cache"); //$NON-NLS-1$ //$NON-NLS-2$
 		response.setHeader(ProtocolConstants.HEADER_ACCEPT_PATCH, ProtocolConstants.CONTENT_TYPE_JSON_PATCH);
 		response.setHeader(ProtocolConstants.HEADER_CONTENT_TYPE, "multipart/related; boundary=\"" + boundary + '"'); //$NON-NLS-1$
 		OutputStream outputStream = response.getOutputStream();
@@ -213,7 +214,6 @@ class FileHandlerV1 extends GenericFileHandler {
 
 	@Override
 	public boolean handleRequest(HttpServletRequest request, HttpServletResponse response, IFileStore file) throws ServletException {
-		long time = System.currentTimeMillis();
 		try {
 			String fileETag = generateFileETag(file);
 			if (handleIfMatchHeader(request, response, fileETag)) {
@@ -273,8 +273,6 @@ class FileHandlerV1 extends GenericFileHandler {
 		} catch (Exception e) {
 			if (!handleAuthFailure(request, response, e))
 				throw new ServletException(NLS.bind("Error retrieving file: {0}", file), e);
-		} finally {
-			response.addHeader("ServerTime", "" + (System.currentTimeMillis() - time));
 		}
 		return false;
 	}

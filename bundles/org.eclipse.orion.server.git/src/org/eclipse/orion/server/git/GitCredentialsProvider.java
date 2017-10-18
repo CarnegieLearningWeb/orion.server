@@ -11,7 +11,9 @@
 package org.eclipse.orion.server.git;
 
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Vector;
 
 import org.eclipse.jgit.errors.UnsupportedCredentialItem;
@@ -27,6 +29,7 @@ public class GitCredentialsProvider extends UsernamePasswordCredentialsProvider 
 	private byte[] privateKey;
 	private byte[] publicKey;
 	private byte[] passphrase;
+	private Map<String, IGitHubToken> tokenCache = new HashMap<String, IGitHubToken>();
 
 	private static Vector<IGitHubTokenProvider> GithubTokenProviders = new Vector<IGitHubTokenProvider>(9);
 
@@ -88,7 +91,7 @@ public class GitCredentialsProvider extends UsernamePasswordCredentialsProvider 
 	@Override
 	public boolean get(URIish uri, CredentialItem... items) throws UnsupportedCredentialItem {
 		for (CredentialItem item : items) {
-			if (item instanceof CredentialItem.Username) {
+			if (item instanceof CredentialItem.Username || item instanceof CredentialItem.Password) {
 				if ((this.privateKey == null || this.privateKey.length == 0) && (this.publicKey == null || this.publicKey.length == 0) && (this.passphrase == null || this.passphrase.length == 0)) {
 					CredentialItem.Username u = new CredentialItem.Username();
 					CredentialItem.Password p = new CredentialItem.Password();
@@ -96,14 +99,24 @@ public class GitCredentialsProvider extends UsernamePasswordCredentialsProvider 
 					if ((u.getValue() == null || u.getValue().length() == 0) && (p.getValue() == null || p.getValue().length == 0)) {
 						if (uri != null) {
 							if (this.remoteUser != null) {
-								/* see if a GitHub token is available (obviously only applicable for repos hosted at a GitHub) */
+								/* see if a user token is available */
 								String uriString = uri.toString();
-								String token = null;
-								for (int i = 0; token == null && i < GithubTokenProviders.size(); i++) {
-									token = GithubTokenProviders.get(i).getToken(uriString, remoteUser);
+								IGitHubToken token = tokenCache.get(uriString);
+								if (token != null && token.getExpiry() != 0 && token.getExpiry() < System.currentTimeMillis()) {
+									token = null;
+								}
+								if (token == null) {
+									for (int i = 0; token == null && i < GithubTokenProviders.size(); i++) {
+										token = GithubTokenProviders.get(i).getToken(uriString, remoteUser);
+									}
 								}
 								if (token != null) {
-									((CredentialItem.Username)item).setValue(token);
+									if (item instanceof CredentialItem.Username) {
+										((CredentialItem.Username)item).setValue(token.getUsername());
+									} else {
+										((CredentialItem.Password)item).setValue(token.getPassword());
+									}
+									tokenCache.put(uriString, token);
 									continue;
 								}
 							}

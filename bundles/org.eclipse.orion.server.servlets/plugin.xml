@@ -98,7 +98,39 @@
          </init-param>
          <init-param
                name="includeMatches"
-               value=".*[.](js|html|css|pref|woff|ttf)$">
+               value=".*[.](pref|woff|ttf)$">
+         </init-param>
+         <init-param
+               name="excludeMatches"
+               value="^/(file|hosted|gitapi|requirejs)/.*">
+         </init-param>
+      </filter>
+      <filter
+            alias="/"
+            class="org.eclipse.orion.server.servlets.CacheFilter">
+         <init-param
+               name="directives"
+               value="max-age=43200, must-revalidate">
+         </init-param>
+         <init-param
+               name="includeMatches"
+               value=".*[.](js|css)$">
+         </init-param>
+         <init-param
+               name="excludeMatches"
+               value="^/(file|hosted|gitapi|requirejs)/.*">
+         </init-param>
+      </filter>
+      <filter
+            alias="/"
+            class="org.eclipse.orion.server.servlets.CacheFilter">
+         <init-param
+               name="directives"
+               value="max-age=0, no-cache, no-store">
+         </init-param>
+         <init-param
+               name="includeMatches"
+               value=".*[.](html)$">
          </init-param>
          <init-param
                name="excludeMatches"
@@ -175,6 +207,10 @@
          </resource-mapping>
          <resource-mapping
                bundle="org.eclipse.orion.client.webtools"
+               path="/web">
+         </resource-mapping>
+         <resource-mapping
+               bundle="org.eclipse.orion.client.debug"
                path="/web">
          </resource-mapping>
          <resource-mapping

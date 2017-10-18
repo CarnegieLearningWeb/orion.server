@@ -43,6 +43,7 @@ public class ManageOAuthServlet extends HttpServlet {
 
 	private static void writeOAuthError(String error, HttpServletRequest req, HttpServletResponse resp) throws IOException {
 		if (req.getParameter("redirect") == null) {
+			resp.setHeader("Cache-Control", "no-cache"); //$NON-NLS-1$ //$NON-NLS-2$
 			resp.setContentType("text/html; charset=UTF-8");
 			PrintWriter out = resp.getWriter();
 			out.println("<html><head></head>"); //$NON-NLS-1$
@@ -58,6 +59,7 @@ public class ManageOAuthServlet extends HttpServlet {
 			out.close();
 			return;
 		}
+		resp.setHeader("Cache-Control", "no-cache"); //$NON-NLS-1$ //$NON-NLS-2$
 		resp.setContentType("text/html; charset=UTF-8");
 		PrintWriter out = resp.getWriter();
 		out.println("<html><head></head>"); //$NON-NLS-1$

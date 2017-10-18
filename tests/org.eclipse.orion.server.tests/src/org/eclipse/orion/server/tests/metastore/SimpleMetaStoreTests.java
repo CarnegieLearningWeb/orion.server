@@ -474,10 +474,9 @@ public class SimpleMetaStoreTests extends AbstractServerTest {
 		projectInfo.setWorkspaceId("77");
 		try {
 			metaStore.createProject(projectInfo);
+			assertTrue(false); /* should not reach here */
 		} catch (CoreException e) {
-			// we expect to get a core exception here
-			String message = e.getMessage();
-			assertTrue(message.contains("could not find workspace"));
+			assertTrue(true); /* this exception is expected */
 		}
 	}
 
@@ -667,7 +666,7 @@ public class SimpleMetaStoreTests extends AbstractServerTest {
 		} catch (CoreException e) {
 			// we expect to get a core exception here
 			String message = e.getMessage();
-			assertTrue(message.contains("could not create project"));
+			assertTrue(message.contains("could not find workspace"));
 		}
 	}
 
@@ -703,9 +702,9 @@ public class SimpleMetaStoreTests extends AbstractServerTest {
 		// read the workspace
 		WorkspaceInfo readWorkspaceInfo = metaStore.readWorkspace(workspaceInfo2.getUniqueId());
 		assertNotNull(readWorkspaceInfo);
-		assertEquals(readWorkspaceInfo.getFullName(), workspaceInfo1.getFullName());
-		assertEquals(readWorkspaceInfo.getUniqueId(), workspaceInfo1.getUniqueId());
-		assertEquals(readWorkspaceInfo.getUserId(), workspaceInfo1.getUserId());
+		assertEquals(readWorkspaceInfo.getFullName(), workspaceInfo2.getFullName());
+		assertEquals(readWorkspaceInfo.getUniqueId(), workspaceInfo2.getUniqueId());
+		assertEquals(readWorkspaceInfo.getUserId(), workspaceInfo2.getUserId());
 	}
 
 	@Test
@@ -822,7 +821,7 @@ public class SimpleMetaStoreTests extends AbstractServerTest {
 		UserInfo readUserInfo = metaStore.readUser(userInfo.getUniqueId());
 		assertNotNull(readUserInfo);
 		assertEquals(readUserInfo.getUserName(), userInfo.getUserName());
-		assertEquals(1, readUserInfo.getWorkspaceIds().size());
+		assertEquals(2, readUserInfo.getWorkspaceIds().size());
 		assertTrue(readUserInfo.getWorkspaceIds().contains(workspaceInfo1.getUniqueId()));
 		assertTrue(readUserInfo.getWorkspaceIds().contains(workspaceInfo2.getUniqueId()));
 
@@ -2248,7 +2247,7 @@ public class SimpleMetaStoreTests extends AbstractServerTest {
 		UserInfo readUserInfo = metaStore.readUser(userInfo.getUniqueId());
 		assertNotNull(readUserInfo);
 		assertEquals(readUserInfo.getUserName(), userInfo.getUserName());
-		assertEquals(1, readUserInfo.getWorkspaceIds().size());
+		assertEquals(2, readUserInfo.getWorkspaceIds().size());
 		assertTrue(readUserInfo.getWorkspaceIds().contains(workspaceInfo1.getUniqueId()));
 		assertTrue(readUserInfo.getWorkspaceIds().contains(workspaceInfo2.getUniqueId()));
 

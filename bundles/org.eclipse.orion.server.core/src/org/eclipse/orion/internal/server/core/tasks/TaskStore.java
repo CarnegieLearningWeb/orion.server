@@ -24,7 +24,9 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.orion.server.core.IOUtilities;
 import org.eclipse.orion.server.core.LogHelper;
 import org.eclipse.orion.server.core.ServerConstants;
+import org.eclipse.orion.server.core.metastore.IMetaStore;
 import org.eclipse.orion.server.core.resources.Base64;
+import org.eclipse.orion.server.core.resources.FileLocker;
 
 /**
  * A facility for reading/writing information about long running tasks. This store will need to be reimplemented by
@@ -33,10 +35,15 @@ import org.eclipse.orion.server.core.resources.Base64;
  */
 public class TaskStore {
 	private final File root;
-	private static final String tempDirectory = "temp"; //$NON-NLS-1$
+	private final IMetaStore metastore;
 
-	public TaskStore(File root) {
+	private static final String FILENAME_LOCK = ".lock"; //$NON-NLS-1$
+	private static final String FILENAME_TEMP = "temp"; //$NON-NLS-1$
+
+	public TaskStore(File root, IMetaStore metastore) {
 		this.root = root;
+		this.metastore = metastore;
+		LogHelper.log(new Status(IStatus.INFO, ServerConstants.PI_SERVER_CORE, "Tasks metadata location is " + root.toString())); //$NON-NLS-1$
 		if (!root.exists()) {
 			LogHelper.log(new Status(IStatus.INFO, ServerConstants.PI_SERVER_CORE, "Creating tasks folder " + root.toString())); //$NON-NLS-1$
 			if (!this.root.mkdirs()) {
@@ -45,7 +52,7 @@ public class TaskStore {
 		}
 	}
 
-	private String getUserDirectory(String userId) {
+	private String getUserTasksDirectory(String userId) {
 		return new String(Base64.encode(userId.getBytes()));
 	}
 
@@ -63,36 +70,48 @@ public class TaskStore {
 	 * @param td
 	 *            description of the task to read
 	 */
-	public synchronized String readTask(TaskDescription td) {
-		File directory = new File(root, getUserDirectory(td.getUserId()));
-		if (!directory.exists())
-			return null;
-		if (!td.isKeep()) {
-			directory = new File(directory, tempDirectory);
+	public String readTask(TaskDescription td) {
+		String userId = td.getUserId();
+		FileLocker.Lock lock = null;
+		try {
+			lock = metastore.getUserLock(userId).lock(true);
+
+			File directory = new File(root, getUserTasksDirectory(userId));
 			if (!directory.exists())
 				return null;
-		}
-		File taskFile = new File(directory, td.getTaskId());
-		if (!taskFile.exists())
-			return null;
-		StringWriter writer;
-		FileReader reader = null;
-		try {
-			reader = new FileReader(taskFile);
-			writer = new StringWriter();
-			IOUtilities.pipe(reader, writer, true, false);
-			return writer.toString();
+
+			if (!td.isKeep()) {
+				directory = new File(directory, FILENAME_TEMP);
+				if (!directory.exists())
+					return null;
+			}
+
+			File taskFile = new File(directory, td.getTaskId());
+			if (!taskFile.exists())
+				return null;
+			StringWriter writer;
+			FileReader reader = null;
+			try {
+				reader = new FileReader(taskFile);
+				writer = new StringWriter();
+				IOUtilities.pipe(reader, writer, true, false);
+				return writer.toString();
+			} finally {
+				if (reader != null)
+					try {
+						reader.close();
+					} catch (IOException e) {
+						LogHelper.log(e);
+						return null;
+					}
+			}
 		} catch (IOException e) {
 			LogHelper.log(e);
 			return null;
 		} finally {
-			if (reader != null)
-				try {
-					reader.close();
-				} catch (IOException e) {
-					LogHelper.log(e);
-					return null;
-				}
+			if (lock != null) {
+				lock.release();
+			}
 		}
 	}
 
@@ -104,14 +123,20 @@ public class TaskStore {
 	 * @param representation
 	 *            string representation or the task
 	 */
-	public synchronized void writeTask(TaskDescription td, String representation) {
+	public void writeTask(TaskDescription td, String representation) {
+		String userId = td.getUserId();
+
+		FileLocker.Lock lock = null;
 		try {
-			File directory = new File(root, getUserDirectory(td.getUserId()));
+			lock = metastore.getUserLock(userId).lock(false);
+
+			File directory = new File(root, getUserTasksDirectory(userId));
 			if (!directory.exists()) {
 				directory.mkdir();
 			}
+
 			if (!td.isKeep()) {
-				directory = new File(directory, tempDirectory);
+				directory = new File(directory, FILENAME_TEMP);
 				if (!directory.exists())
 					directory.mkdir();
 			}
@@ -121,6 +146,10 @@ public class TaskStore {
 			IOUtilities.pipe(reader, writer, true, true);
 		} catch (IOException e) {
 			LogHelper.log(e);
+		} finally {
+			if (lock != null) {
+				lock.release();
+			}
 		}
 	}
 
@@ -132,19 +161,35 @@ public class TaskStore {
 	 *            description of the task to remove
 	 * @return <code>true</code> if task was removed, <code>false</code> otherwise.
 	 */
-	public synchronized boolean removeTask(TaskDescription td) {
-		File directory = new File(root, getUserDirectory(td.getUserId()));
-		if (!directory.exists())
-			return false;
-		if (!td.isKeep()) {
-			directory = new File(directory, tempDirectory);
+	public boolean removeTask(TaskDescription td) {
+		String userId = td.getUserId();
+
+		FileLocker.Lock lock = null;
+		try {
+			lock = metastore.getUserLock(userId).lock(false);
+
+			File directory = new File(root, getUserTasksDirectory(userId));
 			if (!directory.exists())
 				return false;
-		}
-		File taskFile = new File(directory, td.getTaskId());
-		if (!taskFile.exists())
+
+			if (!td.isKeep()) {
+				directory = new File(directory, FILENAME_TEMP);
+				if (!directory.exists())
+					return false;
+			}
+			File taskFile = new File(directory, td.getTaskId());
+			if (!taskFile.exists())
+				return false;
+
+			return taskFile.delete();
+		} catch (IOException e) {
+			LogHelper.log(e);
 			return false;
-		return taskFile.delete();
+		} finally {
+			if (lock != null) {
+				lock.release();
+			}
+		}
 	}
 
 	private void delete(File f) throws IOException {
@@ -152,12 +197,12 @@ public class TaskStore {
 			for (File c : f.listFiles())
 				delete(c);
 		}
+
 		if (!f.delete())
 			LogHelper.log(new Status(IStatus.ERROR, ServerConstants.PI_SERVER_CORE, "Cannot delete file " + f.getName())); //$NON-NLS-1$
-
 	}
 
-	public synchronized void removeAllTempTasks() {
+	public void removeAllTempTasks() {
 		File[] children = root.listFiles();
 		// listFiles returns null in case of IO exception
 		if (children == null)
@@ -169,29 +214,50 @@ public class TaskStore {
 		}
 	}
 
-	private synchronized void removeAllTempTasks(File userDirectory) {
-		if (!userDirectory.exists())
-			return;
-		File directory = new File(userDirectory, tempDirectory);
-		if (!directory.exists())
-			return;
+	private void removeAllTempTasks(File userDirectory) {
+		FileLocker.Lock lock = null;
 		try {
+			String userId = getUserName(userDirectory.getName());
+			lock = metastore.getUserLock(userId).lock(false);
+
+			if (!userDirectory.isDirectory())
+				return;
+
+			File directory = new File(userDirectory, FILENAME_TEMP);
+			if (!directory.exists())
+				return;
 			delete(directory);
 		} catch (IOException e) {
 			LogHelper.log(e);
+		} finally {
+			if (lock != null) {
+				lock.release();
+			}
 		}
 	}
 
-	private List<TaskDescription> internalReadAllTasksDescriptions(File userDirectory) {
+	private List<TaskDescription> internalReadAllTasksDescriptions(File userDirectory, boolean includeTempTasks) {
 		List<TaskDescription> result = new ArrayList<TaskDescription>();
 		String userId = getUserName(userDirectory.getName());
 		if (userId == null) {
 			return result; // this is not a user directory
 		}
 		for (File taskFile : userDirectory.listFiles()) {
-			if (!taskFile.isFile())
+			if (!taskFile.isFile() || taskFile.getName().equals(FILENAME_LOCK)) {
 				continue;
+			}
 			result.add(new TaskDescription(userId, taskFile.getName(), true));
+		}
+		if (includeTempTasks) {
+			File tempDir = new File(userDirectory, FILENAME_TEMP);
+			if (tempDir.exists() && tempDir.isDirectory()) {
+				for (File taskFile : tempDir.listFiles()) {
+					if (!taskFile.isFile() || taskFile.getName().equals(FILENAME_LOCK)) {
+						continue;
+					}
+					result.add(new TaskDescription(userId, taskFile.getName(), false));
+				}
+			}
 		}
 		return result;
 	}
@@ -203,20 +269,46 @@ public class TaskStore {
 	 *            id of a user that is an owner of tasks
 	 * @return a list of tasks tracked for this user
 	 */
-	public synchronized List<TaskDescription> readAllTasks(String userId) {
-		File userDirectory = new File(root, getUserDirectory(userId));
-		if (!userDirectory.exists())
-			return new ArrayList<TaskDescription>();
+	public List<TaskDescription> readAllTasks(String userId) {
+		FileLocker.Lock lock = null;
+		try {
+			lock = metastore.getUserLock(userId).lock(true);
+			File userDirectory = new File(root, getUserTasksDirectory(userId));
+			if (!userDirectory.exists())
+				return new ArrayList<TaskDescription>();
 
-		return internalReadAllTasksDescriptions(userDirectory);
+			return internalReadAllTasksDescriptions(userDirectory, false);
+		} catch (IOException e) {
+			LogHelper.log(e);
+			return new ArrayList<TaskDescription>();
+		} finally {
+			if (lock != null) {
+				lock.release();
+			}
+		}
 	}
 
-	public synchronized List<TaskDescription> readAllTasks() {
+	public List<TaskDescription> readAllTasks() {
+		return readAllTasks(false);
+	}
+
+	public List<TaskDescription> readAllTasks(boolean includeTempTasks) {
 		List<TaskDescription> result = new ArrayList<TaskDescription>();
 		if (root.exists() && root.isDirectory()) {
 			for (File userDirectory : root.listFiles()) {
-				if (userDirectory.isDirectory()) {
-					result.addAll(internalReadAllTasksDescriptions(userDirectory));
+				String userId = getUserName(userDirectory.getName());
+				FileLocker.Lock lock = null;
+				try {
+					lock = metastore.getUserLock(userId).lock(true);
+					if (userDirectory.isDirectory()) {
+						result.addAll(internalReadAllTasksDescriptions(userDirectory, includeTempTasks));
+					}
+				} catch (IOException e) {
+					LogHelper.log(e);
+				} finally {
+					if (lock != null) {
+						lock.release();
+					}
 				}
 			}
 		} else {

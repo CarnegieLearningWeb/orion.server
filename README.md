@@ -1,18 +1,24 @@
-The goal of Orion is to build developer tooling that works in the browser, at web scale.
-The vision behind Orion is to move software development to the web as a web experience, by
-enabling open tool integration through HTTP and REST, JSON, OAuth, OpenID, and others.
-The idea is to exploit internet design principles throughout, instead of trying to bring
-existing desktop IDE concepts to the browser. See the [Orion wiki](http://wiki.eclipse.org/Orion) for more
-information about Orion.
+Orion
+=====
+
+Orion is an open-source development platform focused on creating applications for the web, in the web.
+
+The vision behind Orion is to move software development to the web by 
+enabling open tool integration through HTTP and REST, JSON, OAuth, OpenID, and others. 
+We exploit internet design principles throughout, allowing Orion to be easily run in the browser, locally and in Electron. 
+
+Great care has been taken to provide a world class web development experience, rather than to recreate the traditional desktop
+IDE experience in a browser tab.
+
+Please refer to our [project page](https://projects.eclipse.org/projects/ecd.orion) for plan and overall project information, or
+head over to the [wiki](http://wiki.eclipse.org/Orion) for even more information about Orion.
 
 Contributing
 ------------
 
-Orion source code is available in an Eclipse Git repository, and there is also a mirror
-on GitHub. For complete details on getting the source and getting setup to develop Orion,
-see the [Orion wiki](http://wiki.eclipse.org/Orion/Getting_the_source).
+For complete details on getting the source and getting setup to develop Orion see the [Orion wiki](http://wiki.eclipse.org/Orion/Getting_the_source).
 
-Bug reports and patches are welcome in [bugzilla](https://bugs.eclipse.org/bugs/enter_bug.cgi?product=Orion).
+Bug reports and patches are welcome in [bugzilla](https://bugs.eclipse.org/bugs/enter_bug.cgi?product=Orion), you can also open pull requests directly against [this repository](https://github.com/eclipse/orion.server).
 
 License
 -------
@@ -22,27 +28,27 @@ This repository contains the Orion Java server, which is available under the [Ec
 How to build Orion using Maven
 ------------------------------
 
-###Install Maven:
+### Install Maven:
 
 Install latest Maven 3.0 from http://maven.apache.org
 
-###Clone Git repositories:
+### Clone Git repositories:
 
-Clone `org.eclipse.orion.client` and `org.eclipse.orion.server` under the same local folder
+Clone `orion.client` and `orion.server` under the same local folder
 
 ```
 % cd /my/git/repos
-% git clone http://git.eclipse.org/gitroot/orion/org.eclipse.orion.client.git
-% git clone http://git.eclipse.org/gitroot/orion/org.eclipse.orion.server.git
+% git clone https://github.com/eclipse/orion.client.git
+% git clone https://github.com/eclipse/orion.server.git
 ```
 
-###Run Maven build:
+### Run Maven build:
 ```
-% cd org.eclipse.orion.server
+% cd orion.server
 % mvn clean install -P platform-kepler,local-build -Dorion.client.build.skip -DskipTests
 ```
 
-###Run the Orion server
+### Run the Orion server
 ```
 % cd releng/org.eclipse.orion.server.repository/target/products/org.eclipse.orion/linux/gtk/x86_64/eclipse/
 % ./orion

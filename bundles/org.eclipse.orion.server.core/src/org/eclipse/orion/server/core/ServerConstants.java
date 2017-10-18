@@ -129,6 +129,12 @@ public class ServerConstants {
 	public static final String CONFIG_FILE_USER_CONTENT = "orion.file.content.location"; //$NON-NLS-1$
 
 	/**
+	 * The name of the configuration property specifying the root location to use for storing task info.
+	 * Must be an absolute path on the server file system.
+	 */
+	public static final String CONFIG_FILE_TASKS = "orion.file.tasks.location"; //$NON-NLS-1$
+
+	/**
 	 * The name of configuration property specifying the SMTP host for sending mail
 	 */
 	public static final String CONFIG_MAIL_SMTP_HOST = "mail.smtp.host"; //$NON-NLS-1$
@@ -173,4 +179,16 @@ public class ServerConstants {
 	 * default is a file called "orion.conf" in the current working directory of the server process.
 	 */
 	public static final String PROP_CONFIG_FILE_LOCATION = "orion.core.configFile"; //$NON-NLS-1$
+	
+	/**
+	 * HTTPClient constants.
+	 */
+	public static final String HTTP_MAX_CONN_HOST_CONF_KEY = "httpClient.maxConnectionsPerHost";
+	public static final String HTTP_MAX_CONN_TOTAL_CONF_KEY = "httpClient.maxTotalConnections";
+	public static final String HTTP_CONN_TIMEOUT_CONF_KEY = "httpClient.connectionTimeout";
+	public static final String HTTP_SO_TIMEOUT_CONF_KEY = "httpClient.soTimeout";
+	public static final String HTTP_CONN_MGR_TIMEOUT_CONF_KEY = "httpClient.connectionManagerTimeout";
+	public static final String HTTP_LONG_CONN_TIMEOUT_CONF_KEY = "longTimeHttpClient.connectionTimeout";
+	public static final String HTTP_LONG_SO_TIMEOUT_CONF_KEY = "longTimeHttpClient.soTimeout";
+	public static final String HTTP_LONG_CONN_MGR_TIMEOUT_CONF_KEY = "longTimeHttpClient.connectionManagerTimeout";
 }
