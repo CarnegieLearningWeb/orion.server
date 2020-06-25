@@ -75,7 +75,11 @@ public enum OAuthProviderType {
 	YAMMER(
 			"Yammer", 
 			"https://www.yammer.com/dialog/oauth", 
-			"https://www.yammer.com/oauth2/access_token.json");
+			"https://www.yammer.com/oauth2/access_token.json"),
+	CLEVER(
+			"Clever",
+			"https://clever.com/oauth/authorize",
+			"https://clever.com/oauth/tokens");
 	
 	private String providerName;
 	

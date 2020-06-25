@@ -24,6 +24,7 @@ import org.eclipse.orion.server.authentication.oauth.OAuthHelper;
 import org.eclipse.orion.server.authentication.oauth.OAuthParams;
 import org.eclipse.orion.server.authentication.oauth.github.GitHubOAuthParams;
 import org.eclipse.orion.server.authentication.oauth.google.GoogleOAuthParams;
+import org.eclipse.orion.server.authentication.oauth.clever.CleverOAuthParams;
 import org.eclipse.orion.server.core.resources.Base64;
 
 /**
@@ -104,6 +105,8 @@ public class ManageOAuthServlet extends HttpServlet {
 			oauthParams = new GoogleOAuthParams(req, login);
 		}else if(type.equals("github")){
 			oauthParams = new GitHubOAuthParams(req, login);
+		}else if(type.equals("clever")){
+			oauthParams = new CleverOAuthParams(req, login);
 		}else{
 			throw new OAuthException("No OAuth provider given");
 		}
